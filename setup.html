@@ -80,10 +80,14 @@
     
     <div class="config-box">
         <h2>🗄️ Schritt 3: Datenbank-Schema</h2>
-        <p>Falls Sie noch keine Tabellen haben:</p>
-        <button class="btn" onclick="openSchema()">📄 Enhanced Schema SQL</button>
+        <p>Falls Sie noch keine Tabellen haben oder Schema-Probleme auftreten:</p>
+        <button class="btn" onclick="openSchemaFix()" style="background: #f44336;">� Schema-Fix SQL (bei Fehlern)</button>
+        <button class="btn" onclick="openSchema()">�📄 Enhanced Schema SQL</button>
         <button class="btn" onclick="openMinimalSchema()">📄 Minimal Schema SQL</button>
+        <button class="btn" onclick="testSchema()">🔍 Schema-Diagnose</button>
         <button class="btn" onclick="openSampleData()">📊 Sample-Daten öffnen</button>
+        
+        <div id="schemaResult" style="margin-top: 15px;"></div>
     </div>
     
     <div class="config-box">
@@ -175,12 +179,85 @@
             });
         }
         
+        function openSchemaFix() {
+            window.open('schema-fix.sql', '_blank');
+        }
+        
         function openSchema() {
             window.open('enhanced-schema.sql', '_blank');
         }
         
         function openMinimalSchema() {
             window.open('minimal-schema.sql', '_blank');
+        }
+        
+        async function testSchema() {
+            const url = document.getElementById('urlInput').value.trim();
+            const key = document.getElementById('keyInput').value.trim();
+            
+            if (!url || !key) {
+                document.getElementById('schemaResult').innerHTML = 
+                    '<div class="error">❌ Bitte erst Credentials eingeben!</div>';
+                return;
+            }
+            
+            document.getElementById('schemaResult').innerHTML = 
+                '<div class="info">🔍 Teste Schema...</div>';
+            
+            try {
+                // Test basic table existence
+                const response = await fetch(url + '/rest/v1/influencers?select=*&limit=0', {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': 'Bearer ' + key
+                    }
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        document.getElementById('schemaResult').innerHTML = 
+                            '<div class="error">❌ Tabelle "influencers" existiert nicht!<br>→ Führen Sie enhanced-schema.sql aus</div>';
+                    } else {
+                        document.getElementById('schemaResult').innerHTML = 
+                            '<div class="error">❌ Schema-Fehler: HTTP ' + response.status + '<br>→ Überprüfen Sie Credentials und RLS-Einstellungen</div>';
+                    }
+                    return;
+                }
+                
+                // Test specific columns that often cause problems
+                const testColumns = ['category_tags', 'bio', 'instagram_url', 'notes'];
+                const missingColumns = [];
+                
+                for (const column of testColumns) {
+                    try {
+                        const columnTest = await fetch(url + `/rest/v1/influencers?select=${column}&limit=0`, {
+                            headers: {
+                                'apikey': key,
+                                'Authorization': 'Bearer ' + key
+                            }
+                        });
+                        
+                        if (!columnTest.ok) {
+                            missingColumns.push(column);
+                        }
+                    } catch (e) {
+                        missingColumns.push(column);
+                    }
+                }
+                
+                if (missingColumns.length === 0) {
+                    document.getElementById('schemaResult').innerHTML = 
+                        '<div class="success">✅ Schema vollständig! Alle Spalten vorhanden.</div>';
+                } else {
+                    document.getElementById('schemaResult').innerHTML = 
+                        '<div class="warning">⚠️ Fehlende Spalten erkannt: ' + missingColumns.join(', ') + 
+                        '<br>→ <strong>Führen Sie schema-fix.sql aus!</strong></div>';
+                }
+                
+            } catch (error) {
+                document.getElementById('schemaResult').innerHTML = 
+                    '<div class="error">❌ Schema-Test Fehler: ' + error.message + '</div>';
+            }
         }
         
         function openSampleData() {

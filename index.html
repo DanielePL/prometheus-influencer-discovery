@@ -1437,10 +1437,17 @@
                         code: error.code
                     });
                     
-                    // Show user-friendly error message
+                    // Show user-friendly error message with schema fix info
                     let errorMsg = error.message;
                     if (error.message.includes('column') && error.message.includes('does not exist')) {
-                        errorMsg = 'Schema-Fehler: Eine Spalte fehlt in der Datenbank.\n\nLösung: Führen Sie enhanced-schema.sql in Supabase aus.';
+                        const missingColumn = error.message.match(/'([^']+)' column/)?.[1] || 'unknown';
+                        errorMsg = `🚨 SCHEMA-PROBLEM ERKANNT!\n\n` +
+                                 `Fehlende Spalte: "${missingColumn}"\n\n` +
+                                 `LÖSUNG:\n` +
+                                 `1. Öffnen Sie das Supabase Dashboard\n` +
+                                 `2. Gehen Sie zum SQL Editor\n` +
+                                 `3. Führen Sie "schema-fix.sql" aus\n\n` +
+                                 `Oder verwenden Sie das Setup-Tool für automatische Diagnose.`;
                     } else if (error.message.includes('permission')) {
                         errorMsg = 'Berechtigung fehlt. Überprüfen Sie RLS-Einstellungen.';
                     }
