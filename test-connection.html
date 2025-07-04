@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Connection Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .btn {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover { background: #e55a2b; }
+        pre {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔥 Prometheus Supabase Connection Test</h1>
+    
+    <div class="test-section">
+        <h2>Step 1: Configuration</h2>
+        <p>Enter your Supabase credentials:</p>
+        <input type="text" id="supabaseUrl" placeholder="Supabase URL" style="width: 100%; padding: 10px; margin: 5px 0; background: #1a1a1a; color: #fff; border: 1px solid #444; border-radius: 5px;">
+        <input type="text" id="supabaseKey" placeholder="Supabase Anon Key" style="width: 100%; padding: 10px; margin: 5px 0; background: #1a1a1a; color: #fff; border: 1px solid #444; border-radius: 5px;">
+        <button class="btn" onclick="testConnection()">Test Connection</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 2: Connection Status</h2>
+        <div id="connectionStatus">Not tested yet</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 3: Database Schema Test</h2>
+        <button class="btn" onclick="testSchema()">Test Schema</button>
+        <div id="schemaStatus">Schema not tested</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 4: Data Operations</h2>
+        <button class="btn" onclick="testInsert()">Test Insert</button>
+        <button class="btn" onclick="insertSampleInfluencers()">Insert Sample Influencers</button>
+        <button class="btn" onclick="testRead()">Test Read</button>
+        <button class="btn" onclick="testUpdate()">Test Update</button>
+        <div id="dataStatus">No data operations tested</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 5: Realtime Test</h2>
+        <button class="btn" onclick="testRealtime()">Test Realtime</button>
+        <div id="realtimeStatus">Realtime not tested</div>
+    </div>
+
+    <script>
+        let supabaseClient = null;
+
+        function testConnection() {
+            const url = document.getElementById('supabaseUrl').value;
+            const key = document.getElementById('supabaseKey').value;
+            
+            if (!url || !key) {
+                document.getElementById('connectionStatus').innerHTML = 
+                    '<span class="error">❌ Please enter both URL and Key</span>';
+                return;
+            }
+
+            try {
+                supabaseClient = supabase.createClient(url, key);
+                document.getElementById('connectionStatus').innerHTML = 
+                    '<span class="success">✅ Connection initialized successfully</span>';
+            } catch (error) {
+                document.getElementById('connectionStatus').innerHTML = 
+                    '<span class="error">❌ Connection failed: ' + error.message + '</span>';
+            }
+        }
+
+        async function testSchema() {
+            if (!supabaseClient) {
+                document.getElementById('schemaStatus').innerHTML = 
+                    '<span class="error">❌ Please test connection first</span>';
+                return;
+            }
+
+            try {
+                // Test if influencers table exists
+                const { data, error } = await supabaseClient
+                    .from('influencers')
+                    .select('count(*)')
+                    .limit(1);
+
+                if (error) {
+                    document.getElementById('schemaStatus').innerHTML = 
+                        '<span class="error">❌ Schema test failed: ' + error.message + '</span>' +
+                        '<br><span class="warning">⚠️ Make sure you have run the schema SQL in Supabase</span>';
+                } else {
+                    document.getElementById('schemaStatus').innerHTML = 
+                        '<span class="success">✅ Schema exists and accessible</span>';
+                }
+            } catch (error) {
+                document.getElementById('schemaStatus').innerHTML = 
+                    '<span class="error">❌ Schema test error: ' + error.message + '</span>';
+            }
+        }
+
+        async function testInsert() {
+            if (!supabaseClient) {
+                document.getElementById('dataStatus').innerHTML = 
+                    '<span class="error">❌ Please test connection first</span>';
+                return;
+            }
+
+            try {
+                const testInfluencer = {
+                    name: 'Test User',
+                    handle: '@test_' + Date.now(),
+                    bio: 'Test influencer for connection testing',
+                    follower_count: 1000,
+                    engagement_rate: 5.0,
+                    status: 'new_lead',
+                    category_tags: ['test'],
+                    assigned_to: 'Test Admin'
+                };
+
+                const { data, error } = await supabaseClient
+                    .from('influencers')
+                    .insert([testInfluencer])
+                    .select();
+
+                if (error) {
+                    document.getElementById('dataStatus').innerHTML = 
+                        '<span class="error">❌ Insert failed: ' + error.message + '</span>';
+                } else {
+                    document.getElementById('dataStatus').innerHTML = 
+                        '<span class="success">✅ Insert successful</span>' +
+                        '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                }
+            } catch (error) {
+                document.getElementById('dataStatus').innerHTML = 
+                    '<span class="error">❌ Insert error: ' + error.message + '</span>';
+            }
+        }
+
+        async function insertSampleInfluencers() {
+            if (!supabaseClient) {
+                document.getElementById('dataStatus').innerHTML = 
+                    '<span class="error">❌ Please test connection first</span>';
+                return;
+            }
+
+            const sampleInfluencers = [
+                {
+                    name: 'Aleksandra | Lifestyle Coach',
+                    handle: '@aleksfit_',
+                    bio: 'Certified fitness coach specializing in women\'s health and lifestyle transformation. 💪✨',
+                    follower_count: 89700,
+                    engagement_rate: 4.2,
+                    post_count: 1240,
+                    status: 'contacted',
+                    assigned_to: 'Sarah Martinez',
+                    category_tags: ['fitness', 'female', 'dach', 'lifestyle'],
+                    instagram_url: 'https://instagram.com/aleksfit_',
+                    last_contact_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                    notes: 'Interested in fitness coaching partnership. Very engaged audience.'
+                },
+                {
+                    name: 'Max | Personal Trainer',
+                    handle: '@maxfitness',
+                    bio: 'Personal trainer helping people achieve their strength goals. 🏋️‍♂️ Based in Munich.',
+                    follower_count: 156000,
+                    engagement_rate: 3.8,
+                    post_count: 890,
+                    status: 'new_lead',
+                    assigned_to: 'Tom Wilson',
+                    category_tags: ['fitness', 'male', 'dach', 'strength'],
+                    instagram_url: 'https://instagram.com/maxfitness',
+                    notes: 'High follower count, potential for partnership.'
+                },
+                {
+                    name: 'Lisa | Yoga & Mindfulness',
+                    handle: '@liveyoga',
+                    bio: 'Yoga instructor & mindfulness coach. Finding balance in busy lives 🧘‍♀️🌿',
+                    follower_count: 73000,
+                    engagement_rate: 5.1,
+                    post_count: 2100,
+                    status: 'negotiating',
+                    assigned_to: 'Sarah Martinez',
+                    category_tags: ['fitness', 'yoga', 'female', 'wellness', 'mindfulness'],
+                    instagram_url: 'https://instagram.com/liveyoga',
+                    last_contact_date: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+                    notes: 'In active negotiation, very interested.'
+                }
+            ];
+
+            try {
+                document.getElementById('dataStatus').innerHTML = 
+                    '<span class="info">⏳ Inserting sample influencers...</span>';
+
+                const { data, error } = await supabaseClient
+                    .from('influencers')
+                    .insert(sampleInfluencers)
+                    .select();
+
+                if (error) {
+                    document.getElementById('dataStatus').innerHTML = 
+                        '<span class="error">❌ Insert failed: ' + error.message + '</span>';
+                } else {
+                    document.getElementById('dataStatus').innerHTML = 
+                        '<span class="success">✅ Sample influencers inserted successfully! (' + data.length + ' records)</span>' +
+                        '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                }
+            } catch (error) {
+                document.getElementById('dataStatus').innerHTML = 
+                    '<span class="error">❌ Insert error: ' + error.message + '</span>';
+            }
+        }
+
+        async function testRead() {
+            if (!supabaseClient) {
+                document.getElementById('dataStatus').innerHTML = 
+                    '<span class="error">❌ Please test connection first</span>';
+                return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('influencers')
+                    .select('*')
+                    .limit(5);
+
+                if (error) {
+                    document.getElementById('dataStatus').innerHTML = 
+                        '<span class="error">❌ Read failed: ' + error.message + '</span>';
+                } else {
+                    document.getElementById('dataStatus').innerHTML = 
+                        '<span class="success">✅ Read successful (' + data.length + ' records)</span>' +
+                        '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                }
+            } catch (error) {
+                document.getElementById('dataStatus').innerHTML = 
+                    '<span class="error">❌ Read error: ' + error.message + '</span>';
+            }
+        }
+
+        async function testUpdate() {
+            if (!supabaseClient) {
+                document.getElementById('dataStatus').innerHTML = 
+                    '<span class="error">❌ Please test connection first</span>';
+                return;
+            }
+
+            try {
+                // Find a test record first
+                const { data: existing, error: readError } = await supabaseClient
+                    .from('influencers')
+                    .select('id')
+                    .ilike('handle', '@test_%')
+                    .limit(1);
+
+                if (readError || !existing.length) {
+                    document.getElementById('dataStatus').innerHTML = 
+                        '<span class="warning">⚠️ No test records found for update. Run Insert test first.</span>';
+                    return;
+                }
+
+                const { data, error } = await supabaseClient
+                    .from('influencers')
+                    .update({ notes: 'Updated at ' + new Date().toISOString() })
+                    .eq('id', existing[0].id)
+                    .select();
+
+                if (error) {
+                    document.getElementById('dataStatus').innerHTML = 
+                        '<span class="error">❌ Update failed: ' + error.message + '</span>';
+                } else {
+                    document.getElementById('dataStatus').innerHTML = 
+                        '<span class="success">✅ Update successful</span>' +
+                        '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                }
+            } catch (error) {
+                document.getElementById('dataStatus').innerHTML = 
+                    '<span class="error">❌ Update error: ' + error.message + '</span>';
+            }
+        }
+
+        async function testRealtime() {
+            if (!supabaseClient) {
+                document.getElementById('realtimeStatus').innerHTML = 
+                    '<span class="error">❌ Please test connection first</span>';
+                return;
+            }
+
+            try {
+                document.getElementById('realtimeStatus').innerHTML = 
+                    '<span class="warning">⏳ Setting up realtime subscription...</span>';
+
+                const channel = supabaseClient
+                    .channel('test-channel')
+                    .on('postgres_changes', 
+                        { event: '*', schema: 'public', table: 'influencers' }, 
+                        (payload) => {
+                            document.getElementById('realtimeStatus').innerHTML = 
+                                '<span class="success">✅ Realtime working! Change detected:</span>' +
+                                '<pre>' + JSON.stringify(payload, null, 2) + '</pre>';
+                        }
+                    )
+                    .subscribe();
+
+                setTimeout(() => {
+                    document.getElementById('realtimeStatus').innerHTML += 
+                        '<br><span class="warning">⚠️ Subscription active. Make a change in Supabase dashboard to test.</span>';
+                }, 2000);
+
+            } catch (error) {
+                document.getElementById('realtimeStatus').innerHTML = 
+                    '<span class="error">❌ Realtime error: ' + error.message + '</span>';
+            }
+        }
+    </script>
+</body>
+</html>

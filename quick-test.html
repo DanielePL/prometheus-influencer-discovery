@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Quick Supabase Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .btn {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 14px;
+        }
+        .btn:hover { background: #e55a2b; }
+        .result {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid #333;
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        pre {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Supabase Quick Test</h1>
+    
+    <button onclick="insertSampleData()" class="btn btn-primary">
+        🔄 Insert Sample Data
+    </button>
+    
+    <button onclick="checkSchema()" class="btn">
+        🗄️ Check Schema
+    </button>
+    
+    <button onclick="loadInfluencers()" class="btn">
+        📊 Load Data
+    </button>
+    
+    <button onclick="clearData()" class="btn">
+        🗑️ Clear Data
+    </button>
+    
+    <div id="result" class="result">
+        Bereit für Tests...
+    </div>
+
+    <script>
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://vzmmdhyrbgfakagzehtx.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6bW1kaHlyYmdmYWthZ3plaHR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1NTkzMTYsImV4cCI6MjA2NzEzNTMxNn0.FgYggzoIsHTuQTKbVpvWni-BXp6IdgI1UAvwm2tzU9A';
+        
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        async function insertSampleData() {
+            document.getElementById('result').innerHTML = '<div class="info">⏳ Inserting sample data...</div>';
+            
+            const sampleInfluencers = [
+                {
+                    name: 'Aleksandra | Lifestyle Coach',
+                    handle: '@aleksfit_',
+                    bio: 'Certified fitness coach specializing in women\'s health',
+                    follower_count: 89700,
+                    engagement_rate: 4.2,
+                    status: 'contacted',
+                    assigned_to: 'Sarah Martinez',
+                    category_tags: ['fitness', 'female', 'dach']
+                },
+                {
+                    name: 'Max | Personal Trainer',
+                    handle: '@maxfitness',
+                    bio: 'Personal trainer helping people achieve their goals',
+                    follower_count: 156000,
+                    engagement_rate: 3.8,
+                    status: 'new_lead',
+                    assigned_to: 'Tom Wilson',
+                    category_tags: ['fitness', 'male', 'dach']
+                }
+            ];
+
+            try {
+                const { data, error } = await supabase
+                    .from('influencers')
+                    .insert(sampleInfluencers)
+                    .select();
+
+                if (error) {
+                    document.getElementById('result').innerHTML = 
+                        '<div class="error">❌ Error: ' + error.message + '</div>';
+                    console.error('Insert error:', error);
+                    return;
+                }
+
+                document.getElementById('result').innerHTML = 
+                    '<div class="success">✅ Successfully inserted ' + data.length + ' influencers!</div>' +
+                    '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                    
+                console.log('✅ Data inserted:', data);
+            } catch (err) {
+                document.getElementById('result').innerHTML = 
+                    '<div class="error">❌ Error: ' + err.message + '</div>';
+                console.error('Insert error:', err);
+            }
+        }
+        
+        async function checkSchema() {
+            document.getElementById('result').innerHTML = '<div class="info">⏳ Checking schema...</div>';
+            
+            try {
+                const { data, error } = await supabase
+                    .from('influencers')
+                    .select('*')
+                    .limit(0);
+
+                if (error) {
+                    let errorMsg = 'Schema Problem:\n\n';
+                    if (error.message.includes('relation') && error.message.includes('does not exist')) {
+                        errorMsg += '❌ Tabelle "influencers" existiert nicht!\n\n';
+                        errorMsg += '✅ Lösung:\n';
+                        errorMsg += '1. Öffnen Sie Supabase Dashboard\n';
+                        errorMsg += '2. Gehen Sie zu SQL Editor\n';
+                        errorMsg += '3. Führen Sie minimal-schema.sql aus';
+                    } else {
+                        errorMsg += '❌ Fehler: ' + error.message;
+                    }
+                    
+                    document.getElementById('result').innerHTML = 
+                        '<div class="error">' + errorMsg.replace(/\n/g, '<br>') + '</div>';
+                    return;
+                }
+
+                document.getElementById('result').innerHTML = 
+                    '<div class="success">✅ Schema OK! Tabelle "influencers" ist zugänglich.</div>';
+                    
+            } catch (err) {
+                document.getElementById('result').innerHTML = 
+                    '<div class="error">❌ Schema-Check Fehler: ' + err.message + '</div>';
+            }
+        }
+
+        async function loadInfluencers() {
+            document.getElementById('result').innerHTML = '<div class="info">⏳ Loading influencers...</div>';
+            
+            try {
+                const { data, error } = await supabase
+                    .from('influencers')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    document.getElementById('result').innerHTML = 
+                        '<div class="error">❌ Error loading influencers: ' + error.message + '</div>';
+                    console.error('❌ Error loading influencers:', error);
+                    return [];
+                }
+
+                document.getElementById('result').innerHTML = 
+                    '<div class="success">✅ Loaded ' + data.length + ' influencers from Supabase</div>' +
+                    '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                    
+                console.log('✅ Loaded influencers from Supabase:', data);
+                return data || [];
+            } catch (err) {
+                document.getElementById('result').innerHTML = 
+                    '<div class="error">❌ Load error: ' + err.message + '</div>';
+                console.error('❌ Load error:', err);
+                return [];
+            }
+        }
+        
+        async function clearData() {
+            if (!confirm('Alle Influencer-Daten löschen?')) return;
+            
+            document.getElementById('result').innerHTML = '<div class="info">⏳ Clearing data...</div>';
+            
+            try {
+                const { error } = await supabase
+                    .from('influencers')
+                    .delete()
+                    .gte('id', 0); // Delete all records
+
+                if (error) {
+                    document.getElementById('result').innerHTML = 
+                        '<div class="error">❌ Error clearing data: ' + error.message + '</div>';
+                    return;
+                }
+
+                document.getElementById('result').innerHTML = 
+                    '<div class="success">✅ All data cleared successfully!</div>';
+                    
+            } catch (err) {
+                document.getElementById('result').innerHTML = 
+                    '<div class="error">❌ Clear error: ' + err.message + '</div>';
+            }
+        }
+        
+        // Test connection on load
+        window.addEventListener('load', async () => {
+            try {
+                const { data, error } = await supabase.from('influencers').select('count(*)', { count: 'exact', head: true });
+                if (error) throw error;
+                
+                document.getElementById('result').innerHTML = 
+                    '<div class="success">✅ Connected to Supabase! Current records: ' + (data || 0) + '</div>';
+            } catch (err) {
+                document.getElementById('result').innerHTML = 
+                    '<div class="error">❌ Connection failed: ' + err.message + '</div>';
+            }
+        });
+    </script>
+</body>
+</html>

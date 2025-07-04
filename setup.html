@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Schnelle Supabase-Konfiguration</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .config-box {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #333;
+        }
+        .btn {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 14px;
+        }
+        .btn:hover { background: #e55a2b; }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: #1a1a1a;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .info { color: #2196F3; }
+        code {
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Prometheus Supabase Setup</h1>
+    
+    <div class="config-box">
+        <h2>📋 Schritt 1: Supabase-Credentials holen</h2>
+        <p>1. Gehen Sie zu <a href="https://supabase.com/dashboard" target="_blank" style="color: #ff6b35;">supabase.com/dashboard</a></p>
+        <p>2. Wählen Sie Ihr Projekt → <code>Settings</code> → <code>API</code></p>
+        <p>3. Kopieren Sie:</p>
+        <ul>
+            <li><strong>Project URL</strong> (z.B. <code>https://ihreprojektid.supabase.co</code>)</li>
+            <li><strong>anon public</strong> Key (NICHT den service_role Key!)</li>
+        </ul>
+    </div>
+    
+    <div class="config-box">
+        <h2>⚙️ Schritt 2: Credentials eingeben</h2>
+        <input type="text" id="urlInput" placeholder="Supabase URL (https://ihreprojektid.supabase.co)">
+        <input type="text" id="keyInput" placeholder="Supabase Anon Key (eyJhbGciOiJIUzI1NiIs...)">
+        
+        <button class="btn" onclick="setCredentials()">🔧 Credentials setzen & Dashboard öffnen</button>
+        <button class="btn" onclick="testCredentials()">🔍 Credentials testen</button>
+        
+        <div id="result" style="margin-top: 20px;"></div>
+    </div>
+    
+    <div class="config-box">
+        <h2>🗄️ Schritt 3: Datenbank-Schema</h2>
+        <p>Falls Sie noch keine Tabellen haben:</p>
+        <button class="btn" onclick="openSchema()">📄 Schema-SQL öffnen</button>
+        <button class="btn" onclick="openSampleData()">📊 Sample-Daten öffnen</button>
+    </div>
+    
+    <div class="config-box">
+        <h2>🚀 Schritt 4: Dashboard starten</h2>
+        <button class="btn" onclick="openDashboard()">🎯 Dashboard öffnen</button>
+        <button class="btn" onclick="openTestTool()">🔧 Test-Tool öffnen</button>
+    </div>
+
+    <script>
+        function setCredentials() {
+            const url = document.getElementById('urlInput').value.trim();
+            const key = document.getElementById('keyInput').value.trim();
+            
+            if (!url || !key) {
+                document.getElementById('result').innerHTML = 
+                    '<div class="error">❌ Bitte beide Felder ausfüllen!</div>';
+                return;
+            }
+            
+            if (!url.includes('supabase.co')) {
+                document.getElementById('result').innerHTML = 
+                    '<div class="warning">⚠️ URL sollte "supabase.co" enthalten</div>';
+                return;
+            }
+            
+            if (!key.startsWith('eyJ')) {
+                document.getElementById('result').innerHTML = 
+                    '<div class="warning">⚠️ Anon Key sollte mit "eyJ" beginnen</div>';
+                return;
+            }
+            
+            // Set in localStorage for persistence
+            localStorage.setItem('SUPABASE_URL', url);
+            localStorage.setItem('SUPABASE_ANON_KEY', key);
+            
+            // Set in window for immediate use
+            window.SUPABASE_URL = url;
+            window.SUPABASE_ANON_KEY = key;
+            
+            document.getElementById('result').innerHTML = 
+                '<div class="success">✅ Credentials gesetzt! Dashboard wird geöffnet...</div>';
+            
+            setTimeout(() => {
+                window.open('index.html', '_blank');
+            }, 1000);
+        }
+        
+        function testCredentials() {
+            const url = document.getElementById('urlInput').value.trim();
+            const key = document.getElementById('keyInput').value.trim();
+            
+            if (!url || !key) {
+                document.getElementById('result').innerHTML = 
+                    '<div class="error">❌ Bitte beide Felder ausfüllen!</div>';
+                return;
+            }
+            
+            document.getElementById('result').innerHTML = 
+                '<div class="info">🔍 Teste Verbindung...</div>';
+            
+            // Simple test
+            fetch(url + '/rest/v1/', {
+                headers: {
+                    'apikey': key,
+                    'Authorization': 'Bearer ' + key
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = 
+                        '<div class="success">✅ Verbindung erfolgreich!</div>';
+                } else {
+                    document.getElementById('result').innerHTML = 
+                        '<div class="error">❌ Verbindung fehlgeschlagen: HTTP ' + response.status + '</div>';
+                }
+            })
+            .catch(error => {
+                document.getElementById('result').innerHTML = 
+                    '<div class="error">❌ Verbindungsfehler: ' + error.message + '</div>';
+            });
+        }
+        
+        function openSchema() {
+            window.open('supabase-schema.sql', '_blank');
+        }
+        
+        function openSampleData() {
+            window.open('sample-data.sql', '_blank');
+        }
+        
+        function openDashboard() {
+            window.open('index.html', '_blank');
+        }
+        
+        function openTestTool() {
+            window.open('test-connection.html', '_blank');
+        }
+        
+        // Auto-load saved credentials
+        window.addEventListener('load', function() {
+            const savedUrl = localStorage.getItem('SUPABASE_URL');
+            const savedKey = localStorage.getItem('SUPABASE_ANON_KEY');
+            
+            if (savedUrl) document.getElementById('urlInput').value = savedUrl;
+            if (savedKey) document.getElementById('keyInput').value = savedKey;
+            
+            if (savedUrl && savedKey) {
+                document.getElementById('result').innerHTML = 
+                    '<div class="info">💾 Gespeicherte Credentials geladen</div>';
+            }
+        });
+    </script>
+</body>
+</html>

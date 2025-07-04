@@ -1,0 +1,3178 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prometheus Influencer Discovery Dashboard</title>
+    <!-- Supabase Client via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+            background: #1a1a1a;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: #2a2a2a;
+            padding: 20px 0;
+            border-right: 1px solid #333;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            margin-bottom: 30px;
+        }
+        
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: #ff6b35;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 12px;
+        }
+        
+        .logo-text {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .logo-subtitle {
+            font-size: 12px;
+            color: #888;
+            margin-top: 2px;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #ccc;
+            font-size: 14px;
+        }
+        
+        .nav-item:hover {
+            background: #333;
+            color: #fff;
+        }
+        
+        .nav-item.active {
+            background: #ff6b35;
+            color: #fff;
+        }
+        
+        .nav-item::before {
+            margin-right: 12px;
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .nav-discovery::before { content: "🔍"; }
+        .nav-pipeline::before { content: "📊"; }
+        .nav-partners::before { content: "🤝"; }
+        .nav-analytics::before { content: "📈"; }
+        .nav-export::before { content: "📤"; }
+        .nav-settings::before { content: "⚙️"; }
+        
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #1a1a1a;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .page-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn-primary {
+            background: #ff6b35;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #e55a2b;
+        }
+        
+        .btn-secondary {
+            background: #333;
+            color: #ccc;
+            border: 1px solid #444;
+        }
+        
+        .btn-secondary:hover {
+            background: #444;
+            color: #fff;
+        }
+        
+        .search-section {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+        }
+        
+        .search-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .search-input {
+            flex: 1;
+            min-width: 250px;
+            padding: 10px 12px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #ff6b35;
+        }
+        
+        .search-input::placeholder {
+            color: #888;
+        }
+        
+        .filter-select {
+            padding: 10px 12px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background: #1a1a1a;
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            border-color: #ff6b35;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .stat-card {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            position: relative;
+        }
+        
+        .stat-card::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #ff6b35;
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-change {
+            font-size: 12px;
+            color: #4CAF50;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .stat-change::before {
+            content: "▲";
+        }
+        
+        .stat-change.growth-positive {
+            color: #4CAF50;
+        }
+        
+        .stat-change.growth-positive::before {
+            content: "▲";
+        }
+        
+        .stat-change.growth-negative {
+            color: #F44336;
+        }
+        
+        .stat-change.growth-negative::before {
+            content: "▼";
+        }
+        
+        .content-section {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #333;
+            margin-bottom: 20px;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .section-action {
+            color: #ff6b35;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        
+        .section-action:hover {
+            text-decoration: underline;
+        }
+        
+        .influencer-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .influencer-table th {
+            text-align: left;
+            padding: 12px;
+            font-size: 13px;
+            color: #888;
+            font-weight: 500;
+            border-bottom: 1px solid #333;
+        }
+        
+        .influencer-table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid #333;
+            font-size: 14px;
+        }
+        
+        .influencer-table tr:hover {
+            background: #333;
+        }
+        
+        .influencer-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .profile-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            background: #ff6b35;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .profile-info h4 {
+            color: #ffffff;
+            margin-bottom: 2px;
+            font-size: 14px;
+        }
+        
+        .profile-info p {
+            color: #888;
+            font-size: 12px;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .status-contacted {
+            background: #ff6b35;
+            color: white;
+        }
+        
+        .status-new-lead {
+            background: #333;
+            color: #ccc;
+        }
+        
+        .status-new {
+            background: #333;
+            color: #ccc;
+        }
+        
+        .status-negotiating {
+            background: #FFA726;
+            color: white;
+        }
+        
+        .status-partner {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .follower-count {
+            color: #ffffff;
+            font-weight: 500;
+        }
+        
+        .engagement-rate {
+            color: #4CAF50;
+            font-weight: 500;
+        }
+        
+        .engagement-rate.medium {
+            color: #FFA726;
+        }
+        
+        .engagement-rate.low {
+            color: #FF5722;
+        }
+        
+        .tags {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        
+        .tag {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .tag-fitness {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .tag-female {
+            background: #E91E63;
+            color: white;
+        }
+        
+        .tag-dach {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .tag-lifestyle {
+            background: #9C27B0;
+            color: white;
+        }
+        
+        .tag-nutrition {
+            background: #FF9800;
+            color: white;
+        }
+        
+        .tag-wellness {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .tag-male {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .tag-yoga {
+            background: #673AB7;
+            color: white;
+        }
+        
+        .tag-bodybuilding {
+            background: #795548;
+            color: white;
+        }
+        
+        .tag-cardio {
+            background: #F44336;
+            color: white;
+        }
+        
+        .tag-health {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .tag-education {
+            background: #607D8B;
+            color: white;
+        }
+        
+        .tag-crossfit {
+            background: #FF5722;
+            color: white;
+        }
+        
+        .tag-powerlifting {
+            background: #424242;
+            color: white;
+        }
+        
+        .tag-strength {
+            background: #795548;
+            color: white;
+        }
+        
+        .tag-mindfulness {
+            background: #9C27B0;
+            color: white;
+        }
+        
+        .tag-fashion {
+            background: #E91E63;
+            color: white;
+        }
+        
+        .assigned-to {
+            color: #ccc;
+            font-size: 12px;
+        }
+        
+        .last-contact {
+            color: #888;
+            font-size: 12px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-small {
+            padding: 6px 10px;
+            font-size: 11px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-view {
+            background: #ff6b35;
+            color: white;
+        }
+        
+        .btn-view:hover {
+            background: #e55a2b;
+        }
+        
+        .btn-contact {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-contact:hover {
+            background: #45a049;
+        }
+        
+        .btn-notes {
+            background: #FFA726;
+            color: white;
+        }
+        
+        .btn-notes:hover {
+            background: #fb8c00;
+        }
+        
+        .activity-feed {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #333;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 16px;
+            background: #ff6b35;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        
+        .activity-content {
+            flex: 1;
+        }
+        
+        .activity-text {
+            color: #ffffff;
+            font-size: 13px;
+            margin-bottom: 2px;
+        }
+        
+        .activity-time {
+            color: #888;
+            font-size: 11px;
+        }
+        
+        .activity-value {
+            color: #ff6b35;
+            font-weight: 500;
+        }
+        
+        .verified-icon {
+            color: #2196F3;
+            font-size: 12px;
+            margin-left: 4px;
+        }
+        
+        .exit-fullscreen {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #333;
+            color: #ccc;
+            border: 1px solid #444;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 0;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            border: 1px solid #333;
+        }
+        
+        .modal-content.large {
+            max-width: 800px;
+        }
+        
+        .modal-content.small {
+            max-width: 400px;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            color: #fff;
+            font-size: 18px;
+        }
+        
+        .modal-header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .btn-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-close:hover {
+            color: #fff;
+        }
+        
+        .modal-form {
+            padding: 20px;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .form-group label {
+            color: #ccc;
+            font-size: 13px;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 10px 12px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background: #1a1a1a;
+            color: #fff;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #ff6b35;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #333;
+        }
+        
+        .btn-danger {
+            background: #F44336;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .loading-spinner {
+            text-align: center;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #333;
+            border-top: 4px solid #ff6b35;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-spinner p {
+            color: #ccc;
+            margin: 0;
+        }
+        
+        /* Influencer Detail View */
+        .influencer-detail-view {
+            padding: 20px;
+        }
+        
+        .detail-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .detail-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+            background: #ff6b35;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        .detail-info h3 {
+            margin: 0 0 5px 0;
+            color: #fff;
+            font-size: 20px;
+        }
+        
+        .detail-info p {
+            margin: 0;
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .detail-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .detail-stat {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #333;
+        }
+        
+        .detail-stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+        
+        .detail-stat-label {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .detail-section {
+            margin-bottom: 20px;
+        }
+        
+        .detail-section h4 {
+            color: #fff;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .detail-section p {
+            color: #ccc;
+            line-height: 1.5;
+        }
+        
+        /* Success/Error Messages */
+        .message {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        .message.success {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .message.error {
+            background: #F44336;
+            color: white;
+        }
+        
+        .message.warning {
+            background: #FFA726;
+            color: white;
+        }
+        
+        /* Enhanced Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-edit {
+            background: #FFA726;
+            color: white;
+        }
+        
+        .btn-edit:hover {
+            background: #fb8c00;
+        }
+        
+        .btn-delete {
+            background: #F44336;
+            color: white;
+        }
+        
+        .btn-delete:hover {
+            background: #d32f2f;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .search-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-input {
+                min-width: auto;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">⚡</div>
+                <div>
+                    <div class="logo-text">Prometheus</div>
+                    <div class="logo-subtitle">Influencer Discovery</div>
+                </div>
+            </div>
+            
+            <div class="nav-item nav-discovery active">
+                Influencer Discovery
+            </div>
+            <div class="nav-item nav-pipeline">
+                Pipeline Management
+            </div>
+            <div class="nav-item nav-partners">
+                Active Partners
+            </div>
+            <div class="nav-item nav-analytics">
+                Performance Analytics
+            </div>
+            <div class="nav-item nav-export">
+                Export & Reports
+            </div>
+            <div class="nav-item nav-settings">
+                Settings
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="exit-fullscreen">
+                To exit full screen, press and hold <strong>esc</strong>
+            </div>
+            
+            <div class="header">
+                <h1 class="page-title">Influencer Discovery Dashboard</h1>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" id="debugBtn">🔍 Debug Supabase</button>
+                    <button class="btn btn-secondary" id="checkSchemaBtn">🗄️ Check Schema</button>
+                    <button class="btn btn-secondary" id="insertDataBtn">📊 Insert Sample Data</button>
+                    <button class="btn btn-secondary" id="exportBtn">Export Report</button>
+                    <button class="btn btn-primary" id="addInfluencerBtn">Add New Influencer</button>
+                </div>
+            </div>
+            
+            <div class="search-section">
+                <div class="search-row">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search by name, handle, or keywords...">
+                    
+                    <select class="filter-select" id="followersFilter">
+                        <option>All Followers</option>
+                        <option>20k - 50k</option>
+                        <option>50k - 100k</option>
+                        <option>100k - 500k</option>
+                        <option>500k+</option>
+                    </select>
+                    
+                    <select class="filter-select" id="statusFilter">
+                        <option>All Status</option>
+                        <option>New Lead</option>
+                        <option>Contacted</option>
+                        <option>Negotiating</option>
+                        <option>Partner</option>
+                    </select>
+                    
+                    <select class="filter-select" id="categoryFilter">
+                        <option>All Categories</option>
+                        <option>Fitness</option>
+                        <option>Lifestyle</option>
+                        <option>Nutrition</option>
+                        <option>Wellness</option>
+                    </select>
+                    
+                    <button class="btn btn-primary" id="importBtn">Import CSV</button>
+                    <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+                </div>
+            </div>
+            
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalInfluencers">247</div>
+                    <div class="stat-label">Total Influencers</div>
+                    <div class="stat-change">+12% vs last month</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="activeOutreach">42</div>
+                    <div class="stat-label">Active Outreach</div>
+                    <div class="stat-change">+8% vs last month</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="activePartners">18</div>
+                    <div class="stat-label">Active Partners</div>
+                    <div class="stat-change">+5% vs last month</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="avgEngagement">4.2%</div>
+                    <div class="stat-label">Avg Engagement Rate</div>
+                    <div class="stat-change">+0.3 vs last quarter</div>
+                </div>
+            </div>
+            
+            <div class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">Influencer Pipeline Overview</h2>
+                    <a href="#" class="section-action">Manage All Influencers</a>
+                </div>
+                
+                <table class="influencer-table">
+                    <thead>
+                        <tr>
+                            <th>Influencer</th>
+                            <th>Status</th>
+                            <th>Followers</th>
+                            <th>Engagement</th>
+                            <th>Categories</th>
+                            <th>Assigned</th>
+                            <th>Last Contact</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="influencerTableBody">
+                        <!-- Table content will be dynamically populated -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">Recent Activity</h2>
+                    <a href="#" class="section-action">View Details</a>
+                </div>
+                
+                <div class="activity-feed" id="activityFeed">
+                    <!-- Activity items will be dynamically populated -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Influencer Modal -->
+    <div id="addInfluencerModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Influencer</h2>
+                <button class="btn-close" onclick="closeModal('addInfluencerModal')">&times;</button>
+            </div>
+            <form id="addInfluencerForm" class="modal-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="influencerName">Name *</label>
+                        <input type="text" id="influencerName" name="name" required placeholder="e.g., Sarah | Fitness Coach">
+                    </div>
+                    <div class="form-group">
+                        <label for="influencerHandle">Handle *</label>
+                        <input type="text" id="influencerHandle" name="handle" required placeholder="@username">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="influencerBio">Bio</label>
+                        <textarea id="influencerBio" name="bio" placeholder="Brief description about the influencer..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="followerCount">Followers</label>
+                        <input type="number" id="followerCount" name="follower_count" placeholder="50000">
+                    </div>
+                    <div class="form-group">
+                        <label for="engagementRate">Engagement Rate (%)</label>
+                        <input type="number" id="engagementRate" name="engagement_rate" step="0.1" placeholder="4.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="influencerStatus">Status</label>
+                        <select id="influencerStatus" name="status">
+                            <option value="new_lead">New Lead</option>
+                            <option value="contacted">Contacted</option>
+                            <option value="negotiating">Negotiating</option>
+                            <option value="partner">Partner</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="assignedTo">Assigned To</label>
+                        <input type="text" id="assignedTo" name="assigned_to" placeholder="Team member name">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="categoryTags">Categories (comma-separated)</label>
+                        <input type="text" id="categoryTags" name="category_tags" placeholder="fitness, female, dach, lifestyle">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="instagramUrl">Instagram URL</label>
+                        <input type="url" id="instagramUrl" name="instagram_url" placeholder="https://instagram.com/username">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addInfluencerModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Influencer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View/Edit Influencer Modal -->
+    <div id="viewInfluencerModal" class="modal" style="display: none;">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2 id="viewInfluencerTitle">Influencer Details</h2>
+                <div class="modal-header-actions">
+                    <button class="btn btn-small btn-secondary" onclick="enableEditMode()">Edit</button>
+                    <button class="btn btn-small btn-danger" onclick="deleteInfluencer()">Delete</button>
+                    <button class="btn-close" onclick="closeModal('viewInfluencerModal')">&times;</button>
+                </div>
+            </div>
+            <div id="influencerDetails" class="influencer-detail-view">
+                <!-- Content will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes Modal -->
+    <div id="notesModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Notes</h2>
+                <button class="btn-close" onclick="closeModal('notesModal')">&times;</button>
+            </div>
+            <form id="notesForm" class="modal-form">
+                <div class="form-group">
+                    <label for="noteTitle">Title</label>
+                    <input type="text" id="noteTitle" name="title" placeholder="Meeting summary, contact info, etc.">
+                </div>
+                <div class="form-group">
+                    <label for="noteContent">Notes *</label>
+                    <textarea id="noteContent" name="content" required placeholder="Add your notes here..." rows="6"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('notesModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Notes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal" style="display: none;">
+        <div class="modal-content small">
+            <div class="modal-header">
+                <h2 id="confirmTitle">Confirm Action</h2>
+                <button class="btn-close" onclick="closeModal('confirmModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">Are you sure you want to proceed?</p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('confirmModal')">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmAction()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p id="loadingText">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Supabase Configuration Script -->
+    <script>
+        // Supabase Configuration
+        // ECHTE SUPABASE-CREDENTIALS GESETZT:
+        const SUPABASE_URL = window.SUPABASE_URL || localStorage.getItem('SUPABASE_URL') || 'https://vzmmdhyrbgfakagzehtx.supabase.co';
+        const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || localStorage.getItem('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6bW1kaHlyYmdmYWthZ3plaHR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1NTkzMTYsImV4cCI6MjA2NzEzNTMxNn0.FgYggzoIsHTuQTKbVpvWni-BXp6IdgI1UAvwm2tzU9A';
+        
+        // ✅ CREDENTIALS SIND JETZT KONFIGURIERT!
+        console.log('🔧 SETUP-CHECK:');
+        console.log('- SUPABASE_URL konfiguriert:', SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE' ? '✅' : '❌');
+        console.log('- SUPABASE_ANON_KEY konfiguriert:', SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY_HERE' ? '✅' : '❌');
+        
+        // Initialize Supabase client
+        let supabaseClient;
+        
+        // Debug Supabase Configuration
+        async function debugSupabaseConnection() {
+            console.log('🔍 DEBUGGING SUPABASE CONNECTION...');
+            console.log('Supabase URL:', SUPABASE_URL);
+            console.log('Supabase Key (masked):', SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.substring(0, 20) + '...' : 'NOT SET');
+            console.log('Supabase Client:', supabaseClient ? 'INITIALIZED' : 'NOT INITIALIZED');
+            
+            if (SUPABASE_URL === 'YOUR_SUPABASE_URL_HERE') {
+                console.error('❌ SUPABASE_URL not configured! Please set your Supabase URL.');
+                return false;
+            }
+            
+            if (SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY_HERE') {
+                console.error('❌ SUPABASE_ANON_KEY not configured! Please set your Supabase anon key.');
+                return false;
+            }
+            
+            if (!supabaseClient) {
+                console.error('❌ Supabase client not initialized!');
+                return false;
+            }
+            
+            try {
+                console.log('🔍 Testing basic connection...');
+                const { data, error } = await supabaseClient
+                    .from('influencers')
+                    .select('*')
+                    .limit(1);
+                
+                if (error) {
+                    console.error('❌ Supabase Query Error:', error);
+                    console.error('Error details:', {
+                        message: error.message,
+                        details: error.details,
+                        hint: error.hint,
+                        code: error.code
+                    });
+                    return false;
+                }
+                
+                console.log('✅ Supabase Connected Successfully!');
+                console.log('Sample data:', data);
+                return true;
+            } catch (err) {
+                console.error('❌ Connection Error:', err);
+                return false;
+            }
+        }
+        
+        // Sample Data Insertion Function - Schema-aware
+        async function insertSampleData() {
+            console.log('🔄 Inserting sample influencer data...');
+            
+            // First clear existing data
+            try {
+                const { error: deleteError } = await supabaseClient
+                    .from('influencers')
+                    .delete()
+                    .neq('id', 0); // Delete all rows
+                
+                if (deleteError) {
+                    console.warn('⚠️ Could not clear existing data:', deleteError.message);
+                }
+            } catch (err) {
+                console.warn('⚠️ Could not clear existing data:', err.message);
+            }
+            
+            // Define sample data with minimal required fields
+            const baseSampleInfluencers = [
+                {
+                    name: 'Aleksandra | Lifestyle Coach',
+                    handle: '@aleksfit_' + Date.now(),
+                    follower_count: 89700,
+                    engagement_rate: 4.2,
+                    status: 'contacted',
+                    assigned_to: 'Sarah Martinez',
+                    category_tags: ['fitness', 'female', 'dach', 'lifestyle']
+                },
+                {
+                    name: 'Max | Personal Trainer',
+                    handle: '@maxfitness_' + Date.now(),
+                    follower_count: 156000,
+                    engagement_rate: 3.8,
+                    status: 'new_lead',
+                    assigned_to: 'Tom Wilson',
+                    category_tags: ['fitness', 'male', 'dach', 'strength']
+                },
+                {
+                    name: 'Lisa | Yoga & Mindfulness',
+                    handle: '@liveyoga_' + Date.now(),
+                    follower_count: 73000,
+                    engagement_rate: 5.1,
+                    status: 'negotiating',
+                    assigned_to: 'Sarah Martinez',
+                    category_tags: ['fitness', 'yoga', 'female', 'wellness']
+                },
+                {
+                    name: 'John | Strength Coach',
+                    handle: '@johntraining_' + Date.now(),
+                    follower_count: 42000,
+                    engagement_rate: 6.3,
+                    status: 'partner',
+                    assigned_to: 'Tom Wilson',
+                    category_tags: ['fitness', 'strength', 'male', 'dach']
+                }
+            ];
+
+            try {
+                if (!supabaseClient) {
+                    console.error('❌ Supabase client not initialized');
+                    alert('❌ Supabase nicht verbunden!');
+                    return false;
+                }
+
+                // Test what columns are available by doing a select first
+                console.log('� Detecting available columns...');
+                const { data: testData, error: testError } = await supabaseClient
+                    .from('influencers')
+                    .select('*')
+                    .limit(0);
+                
+                // If we get a column error, try with minimal columns
+                let sampleInfluencers = baseSampleInfluencers;
+                
+                if (testError && testError.message.includes('column')) {
+                    console.warn('⚠️ Some columns not available, using minimal set');
+                    // Remove potentially problematic columns
+                    sampleInfluencers = baseSampleInfluencers.map(inf => ({
+                        name: inf.name,
+                        handle: inf.handle,
+                        follower_count: inf.follower_count,
+                        engagement_rate: inf.engagement_rate,
+                        status: inf.status,
+                        assigned_to: inf.assigned_to,
+                        category_tags: inf.category_tags
+                    }));
+                } else {
+                    // Add optional columns if they might be available
+                    sampleInfluencers = baseSampleInfluencers.map(inf => ({
+                        ...inf,
+                        bio: `${inf.name.split('|')[1]?.trim() || 'Influencer'} with ${inf.follower_count} followers`,
+                        instagram_url: `https://instagram.com/${inf.handle.substring(1)}`,
+                        post_count: Math.floor(Math.random() * 1000) + 100
+                    }));
+                }
+
+                console.log('📤 Inserting data into Supabase...');
+                
+                const { data, error } = await supabaseClient
+                    .from('influencers')
+                    .insert(sampleInfluencers)
+                    .select();
+
+                if (error) {
+                    console.error('❌ Error inserting data:', error);
+                    
+                    // If we still get a column error, try with even more minimal data
+                    if (error.message.includes('column')) {
+                        console.log('🔄 Trying with minimal columns only...');
+                        const minimalInfluencers = baseSampleInfluencers.map(inf => ({
+                            name: inf.name,
+                            handle: inf.handle,
+                            follower_count: inf.follower_count || 0,
+                            engagement_rate: inf.engagement_rate || 0,
+                            status: inf.status || 'new_lead',
+                            category_tags: inf.category_tags || []
+                        }));
+                        
+                        const { data: retryData, error: retryError } = await supabaseClient
+                            .from('influencers')
+                            .insert(minimalInfluencers)
+                            .select();
+                        
+                        if (retryError) {
+                            throw retryError;
+                        }
+                        
+                        console.log('✅ Sample data inserted successfully with minimal columns!', retryData);
+                        alert(`✅ ${retryData.length} Influencer erfolgreich eingefügt!\n(Minimale Spalten verwendet)`);
+                        
+                        // Reload the dashboard to show new data
+                        await updateDashboardStats();
+                        await updateInfluencerTable();
+                        return true;
+                    }
+                    
+                    console.error('Error details:', {
+                        message: error.message,
+                        details: error.details,
+                        hint: error.hint,
+                        code: error.code
+                    });
+                    
+                    // Show user-friendly error message
+                    let errorMsg = error.message;
+                    if (error.message.includes('column') && error.message.includes('does not exist')) {
+                        errorMsg = 'Schema-Fehler: Eine Spalte fehlt in der Datenbank.\n\nLösung: Führen Sie enhanced-schema.sql in Supabase aus.';
+                    } else if (error.message.includes('permission')) {
+                        errorMsg = 'Berechtigung fehlt. Überprüfen Sie RLS-Einstellungen.';
+                    }
+                    
+                    alert('❌ Fehler beim Einfügen der Daten:\n' + errorMsg);
+                    return false;
+                }
+
+                console.log('✅ Sample data inserted successfully!', data);
+                alert(`✅ ${data.length} Influencer erfolgreich eingefügt!`);
+                
+                // Reload the dashboard to show new data
+                await updateDashboardStats();
+                await updateInfluencerTable();
+                
+                return true;
+            } catch (err) {
+                console.error('❌ Insert error:', err);
+                alert('Fehler beim Einfügen: ' + err.message + '\n\nVersuchen Sie das enhanced-schema.sql auszuführen.');
+                return false;
+            }
+        }
+        
+        // Schema Check Function - Enhanced
+        async function checkSchema() {
+            console.log('🗄️ Checking database schema...');
+            
+            try {
+                if (!supabaseClient) {
+                    console.error('❌ Supabase client not initialized');
+                    alert('❌ Supabase nicht verbunden!');
+                    return false;
+                }
+
+                // Test basic table access and get column info
+                console.log('📊 Testing table access and getting schema info...');
+                const { data, error } = await supabaseClient
+                    .from('influencers')
+                    .select('*')
+                    .limit(1);
+
+                if (error) {
+                    console.error('❌ Schema check failed:', error);
+                    let errorMsg = 'Schema-Problem erkannt:\n\n';
+                    
+                    if (error.message.includes('relation') && error.message.includes('does not exist')) {
+                        errorMsg += '• Die Tabelle "influencers" existiert nicht\n';
+                        errorMsg += '• Führen Sie das enhanced-schema.sql aus\n';
+                    } else if (error.message.includes('permission')) {
+                        errorMsg += '• Berechtigung fehlt\n';
+                        errorMsg += '• Überprüfen Sie RLS-Einstellungen\n';
+                    } else if (error.message.includes('column')) {
+                        errorMsg += '• Spalten-Problem erkannt\n';
+                        errorMsg += '• Führen Sie das enhanced-schema.sql aus\n';
+                    } else {
+                        errorMsg += '• Fehler: ' + error.message + '\n';
+                    }
+                    
+                    errorMsg += '\nLösung:\n';
+                    errorMsg += '1. Öffnen Sie Supabase Dashboard\n';
+                    errorMsg += '2. Gehen Sie zu SQL Editor\n';
+                    errorMsg += '3. Führen Sie enhanced-schema.sql aus';
+                    
+                    alert(errorMsg);
+                    return false;
+                }
+
+                // Test with minimal required columns
+                console.log('📋 Testing minimal required columns...');
+                const { data: testData, error: testError } = await supabaseClient
+                    .from('influencers')
+                    .select('id, name, handle, follower_count, engagement_rate, status, assigned_to, category_tags, created_at')
+                    .limit(1);
+                
+                if (testError) {
+                    console.error('❌ Minimal columns test failed:', testError);
+                    alert('❌ Schema ist unvollständig. Führen Sie enhanced-schema.sql aus.');
+                    return false;
+                }
+
+                console.log('✅ Schema check successful!');
+                
+                // Show available columns info
+                const availableColumns = data && data.length > 0 ? Object.keys(data[0]) : ['name', 'handle', 'status'];
+                console.log('📋 Available columns:', availableColumns);
+                
+                alert(`✅ Schema OK! Tabelle "influencers" ist zugänglich.\n\nVerfügbare Spalten: ${availableColumns.join(', ')}`);
+                return true;
+                
+            } catch (err) {
+                console.error('❌ Schema check error:', err);
+                alert('❌ Schema-Check Fehler: ' + err.message + '\n\nFühren Sie enhanced-schema.sql aus.');
+                return false;
+            }
+        }
+        
+        try {
+            if (SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY_HERE') {
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log('✅ Supabase client initialized');
+                
+                // Run debug check
+                debugSupabaseConnection().then(isConnected => {
+                    if (!isConnected) {
+                        console.error('🚨 SUPABASE CONNECTION FAILED - Using demo data as fallback');
+                    }
+                });
+            } else {
+                console.warn('⚠️ Supabase credentials not configured - Using demo data');
+            }
+        } catch (error) {
+            console.error('❌ Error initializing Supabase client:', error);
+            console.log('🚨 Running in demo mode with static data');
+        }
+        
+        // Global variables for data management
+        let influencersData = [];
+        let activitiesData = [];
+        let filteredInfluencers = [];
+        let previousStats = null;
+        
+        // Optimized Core Database Operations
+        
+        async function getInfluencerStats() {
+            console.log('🔍 getInfluencerStats called');
+            
+            try {
+                if (!supabaseClient || SUPABASE_URL === 'YOUR_SUPABASE_URL_HERE') {
+                    console.warn('⚠️ No Supabase client - calculating demo stats');
+                    return calculateDemoStats();
+                }
+                
+                console.log('✅ Calculating stats from Supabase...');
+                
+                // Get total count
+                console.log('📊 Querying total count...');
+                const { count: totalCount, error: totalError } = await supabaseClient
+                    .from('influencers')
+                    .select('*', { count: 'exact', head: true });
+                
+                if (totalError) {
+                    console.error('❌ Error getting total count:', totalError);
+                    throw totalError;
+                }
+                console.log('✅ Total count:', totalCount);
+                
+                // Get active outreach (contacted + negotiating)
+                console.log('📊 Querying outreach count...');
+                const { count: outreachCount, error: outreachError } = await supabaseClient
+                    .from('influencers')
+                    .select('*', { count: 'exact', head: true })
+                    .in('status', ['contacted', 'negotiating']);
+                
+                if (outreachError) {
+                    console.error('❌ Error getting outreach count:', outreachError);
+                    throw outreachError;
+                }
+                console.log('✅ Outreach count:', outreachCount);
+                
+                // Get active partners
+                console.log('📊 Querying partners count...');
+                const { count: partnersCount, error: partnersError } = await supabaseClient
+                    .from('influencers')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'partner');
+                
+                if (partnersError) {
+                    console.error('❌ Error getting partners count:', partnersError);
+                    throw partnersError;
+                }
+                console.log('✅ Partners count:', partnersCount);
+                
+                // Get average engagement rate
+                console.log('📊 Querying engagement rates...');
+                const { data: engagementData, error: engagementError } = await supabaseClient
+                    .from('influencers')
+                    .select('engagement_rate');
+                
+                if (engagementError) {
+                    console.error('❌ Error getting engagement data:', engagementError);
+                    throw engagementError;
+                }
+                
+                const avgEngagement = engagementData?.length > 0
+                    ? engagementData.reduce((sum, item) => sum + (item.engagement_rate || 0), 0) / engagementData.length
+                    : 0;
+                
+                console.log('✅ Average engagement calculated:', avgEngagement);
+                
+                const stats = {
+                    totalInfluencers: totalCount || 0,
+                    activeOutreach: outreachCount || 0,
+                    activePartners: partnersCount || 0,
+                    avgEngagement: Number(avgEngagement.toFixed(1))
+                };
+                
+                console.log('✅ Final stats calculated from Supabase:', stats);
+                return stats;
+                
+            } catch (error) {
+                console.error('❌ Error in getInfluencerStats:', error);
+                console.warn('🚨 Falling back to demo stats');
+                return calculateDemoStats();
+            }
+        }
+        
+        function calculateDemoStats() {
+            const data = influencersData.length > 0 ? influencersData : demoInfluencers;
+            return {
+                totalInfluencers: data.length,
+                activeOutreach: data.filter(i => ['contacted', 'negotiating'].includes(i.status)).length,
+                activePartners: data.filter(i => i.status === 'partner').length,
+                avgEngagement: data.length > 0 
+                    ? Number((data.reduce((sum, i) => sum + (i.engagement_rate || 0), 0) / data.length).toFixed(1))
+                    : 0
+            };
+        }
+        
+        function calculateGrowthPercentage(current, previous) {
+            if (!previous || previous === 0) return 0;
+            return Number(((current - previous) / previous * 100).toFixed(1));
+        }
+        
+        async function updateInfluencerTable() {
+            try {
+                const tbody = document.getElementById('influencerTableBody');
+                if (!tbody) return;
+                
+                // Show loading state
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #888;">Loading influencers...</td></tr>';
+                
+                // Use filtered data if available, otherwise load fresh data
+                const dataToShow = filteredInfluencers.length > 0 ? filteredInfluencers : await loadInfluencers();
+                
+                // Clear loading and populate table
+                tbody.innerHTML = '';
+                
+                if (dataToShow.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #888;">No influencers found</td></tr>';
+                    return;
+                }
+                
+                dataToShow.forEach(influencer => {
+                    const row = createInfluencerRow(influencer);
+                    tbody.appendChild(row);
+                });
+                
+                console.log(`Updated table with ${dataToShow.length} influencers`);
+                
+            } catch (error) {
+                console.error('Error updating influencer table:', error);
+                const tbody = document.getElementById('influencerTableBody');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #ff6b35;">Error loading influencers. Please try again.</td></tr>';
+                }
+            }
+        }
+        
+        // Helper function to parse filter options from UI
+        function parseFilterOptions() {
+            const searchTerm = document.getElementById('searchInput')?.value?.trim();
+            const followersFilter = document.getElementById('followersFilter')?.value;
+            const statusFilter = document.getElementById('statusFilter')?.value;
+            const categoryFilter = document.getElementById('categoryFilter')?.value;
+            
+            const options = {};
+            
+            if (searchTerm) {
+                options.search = searchTerm;
+            }
+            
+            if (followersFilter && followersFilter !== 'All Followers') {
+                const range = parseFollowersRange(followersFilter);
+                if (range.min) options.minFollowers = range.min;
+                if (range.max) options.maxFollowers = range.max;
+            }
+            
+            if (statusFilter && statusFilter !== 'All Status') {
+                options.status = mapStatusFilterToValue(statusFilter);
+            }
+            
+            if (categoryFilter && categoryFilter !== 'All Categories') {
+                options.categoryTags = [categoryFilter.toLowerCase()];
+            }
+            
+            return options;
+        }
+        
+        function parseFollowersRange(range) {
+            switch(range) {
+                case '20k - 50k': return { min: 20000, max: 50000 };
+                case '50k - 100k': return { min: 50000, max: 100000 };
+                case '100k - 500k': return { min: 100000, max: 500000 };
+                case '500k+': return { min: 500000 };
+                default: return {};
+            }
+        }
+        
+        // Demo data (fallback when Supabase is not configured)
+        const demoInfluencers = [
+            {
+                id: '1',
+                handle: '@aleksfit_',
+                name: 'Aleksandra | Lifestyle Coach',
+                bio: 'Certified fitness coach specializing in women\'s health and lifestyle transformation. 💪✨',
+                follower_count: 89700,
+                engagement_rate: 4.2,
+                post_count: 1240,
+                status: 'contacted',
+                category_tags: ['fitness', 'female', 'dach', 'lifestyle'],
+                assigned_to: 'Sarah Martinez',
+                last_contact_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+                created_at: new Date()
+            },
+            {
+                id: '2',
+                handle: '@maxfitness',
+                name: 'Max | Personal Trainer',
+                bio: 'Personal trainer helping people achieve their strength goals. 🏋️‍♂️ Based in Munich.',
+                follower_count: 156000,
+                engagement_rate: 3.8,
+                post_count: 890,
+                status: 'new_lead',
+                category_tags: ['fitness', 'male', 'dach', 'strength'],
+                assigned_to: 'Tom Wilson',
+                last_contact_date: null,
+                created_at: new Date()
+            },
+            {
+                id: '3',
+                handle: '@liveyoga',
+                name: 'Lisa | Yoga & Mindfulness',
+                bio: 'Yoga instructor & mindfulness coach. Finding balance in busy lives 🧘‍♀️🌿',
+                follower_count: 73000,
+                engagement_rate: 5.1,
+                post_count: 2100,
+                status: 'negotiating',
+                category_tags: ['fitness', 'yoga', 'female', 'wellness', 'mindfulness'],
+                assigned_to: 'Sarah Martinez',
+                last_contact_date: new Date(Date.now() - 5 * 60 * 60 * 1000),
+                created_at: new Date()
+            },
+            {
+                id: '4',
+                handle: '@johntraining',
+                name: 'John | Strength Coach',
+                bio: 'Strength & conditioning coach. Helping athletes reach peak performance.',
+                follower_count: 42000,
+                engagement_rate: 6.3,
+                post_count: 650,
+                status: 'partner',
+                category_tags: ['fitness', 'strength', 'male', 'dach'],
+                assigned_to: 'Tom Wilson',
+                last_contact_date: null,
+                created_at: new Date()
+            }
+        ];
+        
+        const demoActivities = [
+            {
+                id: '1',
+                type: 'discovery',
+                content: 'New influencer discovered',
+                value: '@fitnessguru_marie',
+                avatar: 'I',
+                created_at: new Date(Date.now() - 2 * 60 * 60 * 1000)
+            },
+            {
+                id: '2',
+                type: 'partnership',
+                content: 'Partnership confirmed',
+                value: '@stronglifestyle',
+                avatar: 'P',
+                created_at: new Date(Date.now() - 4 * 60 * 60 * 1000)
+            },
+            {
+                id: '3',
+                type: 'revenue',
+                content: 'Revenue milestone',
+                value: '€2,500',
+                avatar: 'R',
+                created_at: new Date(Date.now() - 24 * 60 * 60 * 1000)
+            },
+            {
+                id: '4',
+                type: 'outreach',
+                content: 'Outreach response',
+                value: '@yoga_with_anna',
+                avatar: 'O',
+                created_at: new Date(Date.now() - 24 * 60 * 60 * 1000)
+            }
+        ];
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                console.log('🚀 Starting Prometheus Dashboard...');
+                initializeApp();
+                setupEventListeners();
+            } catch (error) {
+                console.error('❌ Error during initialization:', error);
+                // Fallback initialization
+                setTimeout(() => {
+                    try {
+                        initializeApp();
+                        setupEventListeners();
+                    } catch (retryError) {
+                        console.error('❌ Retry failed:', retryError);
+                    }
+                }, 1000);
+            }
+        });
+        
+        // Global error handler to catch any unhandled errors
+        window.addEventListener('error', function(event) {
+            console.warn('⚠️ Global error caught (likely from browser extension):', event.error);
+            // Don't let extension errors break our app
+            event.preventDefault();
+        });
+        
+        window.addEventListener('unhandledrejection', function(event) {
+            console.warn('⚠️ Unhandled promise rejection (likely from browser extension):', event.reason);
+            // Don't let extension errors break our app
+            event.preventDefault();
+        });
+        
+        async function initializeApp() {
+            console.log('Initializing Prometheus Influencer Dashboard...');
+            
+            try {
+                // Load initial data and update dashboard
+                await updateDashboardStats();
+                await updateInfluencerTable();
+                
+                // Load activities for the activity feed
+                if (supabaseClient && SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
+                    await loadActivitiesFromSupabase();
+                    setupRealtimeSubscriptions();
+                } else {
+                    activitiesData = demoActivities;
+                    console.log('Using demo data for activities');
+                }
+                
+                updateActivityFeed();
+                console.log('Dashboard initialized successfully');
+                
+            } catch (error) {
+                console.error('Error initializing dashboard:', error);
+                // Fallback to demo data on error
+                influencersData = demoInfluencers;
+                activitiesData = demoActivities;
+                updateUI();
+            }
+        }
+        
+        async function loadActivitiesFromSupabase() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('activities')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(50);
+                
+                if (error) throw error;
+                
+                activitiesData = data || [];
+                console.log(`Loaded ${activitiesData.length} activities from Supabase`);
+                
+            } catch (error) {
+                console.error('Error loading activities:', error);
+                activitiesData = demoActivities;
+            }
+        }
+        
+        // Core data functions for live Supabase integration
+        
+        /**
+         * Load all influencers from Supabase with optional filtering and sorting
+         * @param {Object} options - Filtering and sorting options
+         * @returns {Array} Array of influencer objects
+         */
+        async function loadInfluencers(options = {}) {
+            if (!supabaseClient || SUPABASE_URL === 'YOUR_SUPABASE_URL_HERE') {
+                console.log('Using demo data for influencers');
+                return demoInfluencers;
+            }
+            
+            try {
+                let query = supabaseClient
+                    .from('influencers')
+                    .select('*');
+                
+                // Apply filters if provided
+                if (options.status && options.status !== 'All Status') {
+                    const statusValue = mapStatusFilterToValue(options.status);
+                    query = query.eq('status', statusValue);
+                }
+                
+                if (options.category && options.category !== 'All Categories') {
+                    query = query.contains('category_tags', [options.category.toLowerCase()]);
+                }
+                
+                if (options.followersRange && options.followersRange !== 'All Followers') {
+                    const { min, max } = parseFollowersRange(options.followersRange);
+                    if (min) query = query.gte('follower_count', min);
+                    if (max) query = query.lte('follower_count', max);
+                }
+                
+                if (options.search) {
+                    // Search in handle, name, and bio fields
+                    query = query.or(`handle.ilike.%${options.search}%,name.ilike.%${options.search}%,bio.ilike.%${options.search}%`);
+                }
+                
+                // Apply sorting
+                const sortBy = options.sortBy || 'created_at';
+                const sortOrder = options.sortOrder || 'desc';
+                query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+                
+                const { data: influencers, error } = await query;
+                
+                if (error) throw error;
+                
+                console.log(`Loaded ${influencers?.length || 0} influencers from Supabase`);
+                return influencers || [];
+                
+            } catch (error) {
+                console.error('Error loading influencers from Supabase:', error);
+                return demoInfluencers; // Fallback to demo data
+            }
+        }
+        
+        /**
+         * Calculate dashboard statistics from live data
+         * @returns {Object} Object containing dashboard stats
+         */
+        async function getInfluencerStats() {
+            try {
+                // Load all influencers for stats calculation
+                const influencers = await loadInfluencers();
+                
+                const stats = {
+                    totalInfluencers: influencers.length,
+                    activeOutreach: influencers.filter(i => 
+                        i.status === 'contacted' || i.status === 'negotiating'
+                    ).length,
+                    activePartners: influencers.filter(i => i.status === 'partner').length,
+                    avgEngagement: influencers.length > 0 
+                        ? (influencers.reduce((sum, i) => sum + (i.engagement_rate || 0), 0) / influencers.length)
+                        : 0
+                };
+                
+                // Calculate growth metrics (placeholder for now)
+                const previousStats = await getPreviousStats();
+                stats.growth = {
+                    totalInfluencers: calculateGrowth(stats.totalInfluencers, previousStats.totalInfluencers),
+                    activeOutreach: calculateGrowth(stats.activeOutreach, previousStats.activeOutreach),
+                    activePartners: calculateGrowth(stats.activePartners, previousStats.activePartners),
+                    avgEngagement: (stats.avgEngagement - previousStats.avgEngagement).toFixed(1)
+                };
+                
+                return stats;
+                
+            } catch (error) {
+                console.error('Error calculating influencer stats:', error);
+                // Return demo stats as fallback
+                return {
+                    totalInfluencers: demoInfluencers.length,
+                    activeOutreach: demoInfluencers.filter(i => i.status === 'contacted' || i.status === 'negotiating').length,
+                    activePartners: demoInfluencers.filter(i => i.status === 'partner').length,
+                    avgEngagement: demoInfluencers.reduce((sum, i) => sum + i.engagement_rate, 0) / demoInfluencers.length,
+                    growth: {
+                        totalInfluencers: 12,
+                        activeOutreach: 8,
+                        activePartners: 5,
+                        avgEngagement: 0.3
+                    }
+                };
+            }
+        }
+        
+        /**
+         * Update the influencer table with live data while maintaining exact styling
+         */
+        async function updateInfluencerTable() {
+            const tbody = document.getElementById('influencerTableBody');
+            
+            // Show loading state
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #888;">Loading influencers...</td></tr>';
+            
+            try {
+                // Get current filter options
+                const filterOptions = getCurrentFilterOptions();
+                
+                // Load filtered influencers
+                const influencers = await loadInfluencers(filterOptions);
+                
+                // Clear loading state
+                tbody.innerHTML = '';
+                
+                if (influencers.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #888;">No influencers found matching your filters.</td></tr>';
+                    return;
+                }
+                
+                // Populate table with influencer data
+                influencers.forEach(influencer => {
+                    const row = createInfluencerRow(influencer);
+                    tbody.appendChild(row);
+                });
+                
+                console.log(`Updated table with ${influencers.length} influencers`);
+                
+            } catch (error) {
+                console.error('Error updating influencer table:', error);
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #ff6b35;">Error loading influencers. Please try again.</td></tr>';
+            }
+        }
+        
+        // Helper functions for data operations
+        
+        function parseFollowersRange(range) {
+            const ranges = {
+                '20k - 50k': { min: 20000, max: 50000 },
+                '50k - 100k': { min: 50000, max: 100000 },
+                '100k - 500k': { min: 100000, max: 500000 },
+                '500k+': { min: 500000, max: null }
+            };
+            return ranges[range] || { min: null, max: null };
+        }
+        
+        function getCurrentFilterOptions() {
+            return {
+                search: document.getElementById('searchInput').value.toLowerCase().trim(),
+                followersRange: document.getElementById('followersFilter').value,
+                status: document.getElementById('statusFilter').value,
+                category: document.getElementById('categoryFilter').value
+            };
+        }
+        
+        async function getPreviousStats() {
+            // Placeholder for historical stats comparison
+            // In a real implementation, this would fetch data from a specific date range
+            return {
+                totalInfluencers: 220,
+                activeOutreach: 39,
+                activePartners: 17,
+                avgEngagement: 3.9
+            };
+        }
+        
+        function calculateGrowth(current, previous) {
+            if (previous === 0) return current > 0 ? 100 : 0;
+            return Math.round(((current - previous) / previous) * 100);
+        }
+        
+        async function loadDataFromSupabase() {
+            try {
+                // Load influencers using the new loadInfluencers function
+                influencersData = await loadInfluencers();
+                
+                // Load activities
+                const { data: activities, error: activitiesError } = await supabaseClient
+                    .from('activities')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+                
+                if (activitiesError) throw activitiesError;
+                
+                activitiesData = activities || [];
+                
+                console.log('Data loaded from Supabase:', { influencers: influencersData.length, activities: activitiesData.length });
+            } catch (error) {
+                console.error('Error loading data from Supabase:', error);
+                // Fallback to demo data
+                influencersData = demoInfluencers;
+                activitiesData = demoActivities;
+            }
+        }
+        
+        function setupRealtimeSubscriptions() {
+            if (!supabaseClient) return;
+            
+            // Subscribe to influencers changes
+            supabaseClient
+                .channel('influencers-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'influencers' }, (payload) => {
+                    console.log('Influencers change detected:', payload);
+                    loadDataFromSupabase().then(() => {
+                        filteredInfluencers = [...influencersData];
+                        updateUI();
+                    });
+                })
+                .subscribe();
+            
+            // Subscribe to activities changes
+            supabaseClient
+                .channel('activities-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'activities' }, (payload) => {
+                    console.log('Activities change detected:', payload);
+                    loadDataFromSupabase().then(() => updateActivityFeed());
+                })
+                .subscribe();
+        }
+        
+        function setupEventListeners() {
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', handleSearch);
+            
+            // Filter functionality
+            document.getElementById('followersFilter').addEventListener('change', handleFilters);
+            document.getElementById('statusFilter').addEventListener('change', handleFilters);
+            document.getElementById('categoryFilter').addEventListener('change', handleFilters);
+            
+            // Button functionality
+            document.getElementById('debugBtn').addEventListener('click', async () => {
+                console.log('🔍 Manual debug triggered');
+                await debugSupabaseConnection();
+            });
+            document.getElementById('checkSchemaBtn').addEventListener('click', async () => {
+                console.log('🗄️ Schema check triggered');
+                await checkSchema();
+            });
+            document.getElementById('insertDataBtn').addEventListener('click', async () => {
+                console.log('📊 Inserting sample data...');
+                await insertSampleData();
+            });
+            document.getElementById('addInfluencerBtn').addEventListener('click', handleAddInfluencer);
+            document.getElementById('exportBtn').addEventListener('click', handleExport);
+            document.getElementById('importBtn').addEventListener('click', () => {
+                document.getElementById('csvFileInput').click();
+            });
+            document.getElementById('csvFileInput').addEventListener('change', handleImport);
+        }
+        
+        function handleSearch(event) {
+            const searchTerm = event.target.value.toLowerCase();
+            // Use the new async applyFilters function
+            applyFilters();
+        }
+        
+        function handleFilters() {
+            // Use the new async applyFilters function  
+            applyFilters();
+        }
+        
+        // Legacy applyFilters removed - using new async version defined earlier
+        
+        function checkFollowersRange(followers, range) {
+            switch(range) {
+                case '20k - 50k': return followers >= 20000 && followers <= 50000;
+                case '50k - 100k': return followers >= 50000 && followers <= 100000;
+                case '100k - 500k': return followers >= 100000 && followers <= 500000;
+                case '500k+': return followers >= 500000;
+                default: return true;
+            }
+        }
+        
+        function updateUI() {
+            // Use new dashboard stats update function
+            updateDashboardStats();
+            updateInfluencerTable();
+            updateActivityFeed();
+        }
+        
+        // Dashboard Stats Update Functions
+        async function updateDashboardStats() {
+            try {
+                const currentStats = await getInfluencerStats();
+                
+                // Update stat cards
+                updateStatCard('totalInfluencers', currentStats.totalInfluencers, previousStats?.totalInfluencers);
+                updateStatCard('activeOutreach', currentStats.activeOutreach, previousStats?.activeOutreach);
+                updateStatCard('activePartners', currentStats.activePartners, previousStats?.activePartners);
+                updateStatCard('avgEngagement', currentStats.avgEngagement, previousStats?.avgEngagement, '%');
+                
+                // Store current stats as previous for next update
+                previousStats = { ...currentStats };
+                
+                console.log('Dashboard stats updated successfully');
+                
+            } catch (error) {
+                console.error('Error updating dashboard stats:', error);
+            }
+        }
+        
+        function updateStatCard(statId, currentValue, previousValue, suffix = '') {
+            const statElement = document.getElementById(statId);
+            const growthElement = document.getElementById(statId + 'Growth');
+            
+            if (statElement) {
+                statElement.textContent = formatStatValue(currentValue) + suffix;
+            }
+            
+            if (growthElement && previousValue !== undefined) {
+                const growth = calculateGrowthPercentage(currentValue, previousValue);
+                const isPositive = growth >= 0;
+                
+                growthElement.textContent = `${isPositive ? '+' : ''}${growth}%`;
+                growthElement.className = isPositive ? 'growth-positive' : 'growth-negative';
+            }
+        }
+        
+        function formatStatValue(value) {
+            if (value >= 1000000) {
+                return (value / 1000000).toFixed(1) + 'M';
+            } else if (value >= 1000) {
+                return (value / 1000).toFixed(1) + 'K';
+            }
+            return value.toString();
+        }
+        
+        // Search and Filter Functions
+        async function applyFilters() {
+            try {
+                const filterOptions = parseFilterOptions();
+                console.log('Applying filters:', filterOptions);
+                
+                // Load filtered data
+                filteredInfluencers = await loadInfluencers(filterOptions);
+                
+                // Update the table with filtered results
+                await updateInfluencerTable();
+                
+                // Update filter result count if available
+                const resultCount = document.getElementById('filterResultCount');
+                if (resultCount) {
+                    resultCount.textContent = `${filteredInfluencers.length} results`;
+                }
+                
+            } catch (error) {
+                console.error('Error applying filters:', error);
+            }
+        }
+        
+        function clearFilters() {
+            // Reset all filter inputs
+            const searchInput = document.getElementById('searchInput');
+            const followersFilter = document.getElementById('followersFilter');
+            const statusFilter = document.getElementById('statusFilter');
+            const categoryFilter = document.getElementById('categoryFilter');
+            
+            if (searchInput) searchInput.value = '';
+            if (followersFilter) followersFilter.value = 'All Followers';
+            if (statusFilter) statusFilter.value = 'All Status';
+            if (categoryFilter) categoryFilter.value = 'All Categories';
+            
+            // Clear filtered data and reload all
+            filteredInfluencers = [];
+            updateInfluencerTable();
+        }
+        
+        function mapStatusFilterToValue(filterValue) {
+            const statusMap = {
+                'Potential': 'potential',
+                'Contacted': 'contacted',
+                'Negotiating': 'negotiating',
+                'Partner': 'partner',
+                'Rejected': 'rejected',
+                'Inactive': 'inactive'
+            };
+            return statusMap[filterValue] || filterValue.toLowerCase();
+        }
+        
+        function createInfluencerRow(influencer) {
+            const row = document.createElement('tr');
+            
+            // Generate avatar from name/handle
+            const avatar = influencer.handle ? influencer.handle.substring(1, 3).toUpperCase() : 'NN';
+            
+            const lastContactText = influencer.last_contact_date 
+                ? formatTimeAgo(new Date(influencer.last_contact_date))
+                : (influencer.status === 'partner' ? 'Active partner' : 'Not contacted');
+            
+            // Check if verified (simplified logic for demo)
+            const isVerified = influencer.follower_count > 50000;
+            
+            row.innerHTML = `
+                <td>
+                    <div class="influencer-profile">
+                        <div class="profile-avatar">${avatar}</div>
+                        <div class="profile-info">
+                            <h4>${influencer.handle} ${isVerified ? '<span class="verified-icon">✓</span>' : ''}</h4>
+                            <p>${influencer.name}</p>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="status-badge status-${influencer.status.replace('_', '-')}">${formatStatus(influencer.status)}</span>
+                </td>
+                <td>
+                    <span class="follower-count">${formatFollowers(influencer.follower_count)}</span>
+                </td>
+                <td>
+                    <span class="engagement-rate ${getEngagementClass(influencer.engagement_rate)}">${influencer.engagement_rate}%</span>
+                </td>
+                <td>
+                    <div class="tags">
+                        ${(Array.isArray(influencer.category_tags) ? influencer.category_tags : []).map(cat => `<span class="tag tag-${cat.toLowerCase().replace(/\s+/g, '-')}">${cat}</span>`).join('')}
+                    </div>
+                </td>
+                <td>
+                    <span class="assigned-to">${influencer.assigned_to}</span>
+                </td>
+                <td>
+                    <span class="last-contact">${lastContactText}</span>
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        ${getActionButton(influencer)}
+                    </div>
+                </td>
+            `;
+            
+            return row;
+        }
+        
+        function formatStatus(status) {
+            const statusMap = {
+                'new_lead': 'New Lead',
+                'contacted': 'Contacted',
+                'negotiating': 'Negotiating',
+                'partner': 'Partner'
+            };
+            return statusMap[status] || status;
+        }
+        
+        function formatFollowers(count) {
+            if (count >= 1000000) {
+                return (count / 1000000).toFixed(1) + 'M';
+            } else if (count >= 1000) {
+                return (count / 1000).toFixed(1) + 'k';
+            }
+            return count.toString();
+        }
+        
+        function getEngagementClass(rate) {
+            if (rate >= 5) return '';
+            if (rate >= 3) return 'medium';
+            return 'low';
+        }
+        
+        function getActionButton(influencer) {
+            const buttons = [];
+            
+            switch(influencer.status) {
+                case 'new_lead':
+                    buttons.push(`<button class="btn-small btn-contact" onclick="contactInfluencer('${influencer.id}')">Contact</button>`);
+                    break;
+                case 'contacted':
+                    buttons.push(`<button class="btn-small btn-notes" onclick="addNotes('${influencer.id}')">Add Notes</button>`);
+                    break;
+                case 'negotiating':
+                    buttons.push(`<button class="btn-small btn-notes" onclick="addNotes('${influencer.id}')">Add Notes</button>`);
+                    break;
+                default:
+                    break;
+            }
+            
+            // Always add view and edit buttons
+            buttons.push(`<button class="btn-small btn-view" onclick="viewInfluencer('${influencer.id}')">View</button>`);
+            
+            return buttons.join('');
+        }
+        
+        function updateActivityFeed() {
+            const feed = document.getElementById('activityFeed');
+            feed.innerHTML = '';
+            
+            activitiesData.forEach(activity => {
+                const item = createActivityItem(activity);
+                feed.appendChild(item);
+            });
+        }
+        
+        function createActivityItem(activity) {
+            const item = document.createElement('div');
+            item.className = 'activity-item';
+            
+            item.innerHTML = `
+                <div class="activity-avatar">${activity.avatar}</div>
+                <div class="activity-content">
+                    <div class="activity-text">${activity.content}: <span class="activity-value">${activity.value}</span></div>
+                    <div class="activity-time">${formatTimeAgo(new Date(activity.created_at))}</div>
+                </div>
+            `;
+            
+            return item;
+        }
+        
+        function formatTimeAgo(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / (1000 * 60));
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            
+            if (diffMins < 60) {
+                return diffMins <= 1 ? 'Just now' : `${diffMins} minutes ago`;
+            } else if (diffHours < 24) {
+                return diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
+            } else {
+                return diffDays === 1 ? 'Yesterday' : `${diffDays} days ago`;
+            }
+        }
+        
+        // Global variables for UI state
+        let currentInfluencerId = null;
+        let currentConfirmAction = null;
+        let isEditMode = false;
+        
+        // Action handlers - Complete Implementation
+        async function contactInfluencer(id) {
+            try {
+                showLoading('Updating influencer status...');
+                
+                const { data, error } = await supabaseClient
+                    .from('influencers')
+                    .update({ 
+                        status: 'contacted',
+                        last_contact_date: new Date().toISOString()
+                    })
+                    .eq('id', id)
+                    .select();
+                
+                if (error) throw error;
+                
+                hideLoading();
+                showMessage('Influencer status updated to "Contacted"', 'success');
+                
+                // Refresh the table
+                await updateInfluencerTable();
+                await updateDashboardStats();
+                
+                // Show notes modal to add contact details
+                currentInfluencerId = id;
+                showModal('notesModal');
+                
+            } catch (error) {
+                hideLoading();
+                console.error('Error contacting influencer:', error);
+                showMessage('Error updating influencer status: ' + error.message, 'error');
+            }
+        }
+        
+        async function viewInfluencer(id) {
+            try {
+                showLoading('Loading influencer details...');
+                
+                const { data, error } = await supabaseClient
+                    .from('influencers')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+                
+                if (error) throw error;
+                
+                hideLoading();
+                currentInfluencerId = id;
+                displayInfluencerDetails(data);
+                showModal('viewInfluencerModal');
+                
+            } catch (error) {
+                hideLoading();
+                console.error('Error loading influencer:', error);
+                showMessage('Error loading influencer details: ' + error.message, 'error');
+            }
+        }
+        
+        async function addNotes(id) {
+            currentInfluencerId = id;
+            document.getElementById('noteTitle').value = '';
+            document.getElementById('noteContent').value = '';
+            showModal('notesModal');
+        }
+        
+        async function handleAddInfluencer() {
+            // Reset form
+            document.getElementById('addInfluencerForm').reset();
+            showModal('addInfluencerModal');
+        }
+        
+        async function deleteInfluencer(id = currentInfluencerId) {
+            if (!id) return;
+            
+            currentConfirmAction = async () => {
+                try {
+                    showLoading('Deleting influencer...');
+                    
+                    const { error } = await supabaseClient
+                        .from('influencers')
+                        .delete()
+                        .eq('id', id);
+                    
+                    if (error) throw error;
+                    
+                    hideLoading();
+                    closeModal('viewInfluencerModal');
+                    closeModal('confirmModal');
+                    showMessage('Influencer deleted successfully', 'success');
+                    
+                    await updateInfluencerTable();
+                    await updateDashboardStats();
+                    
+                } catch (error) {
+                    hideLoading();
+                    console.error('Error deleting influencer:', error);
+                    showMessage('Error deleting influencer: ' + error.message, 'error');
+                }
+            };
+            
+            showConfirmation(
+                'Delete Influencer',
+                'Are you sure you want to delete this influencer? This action cannot be undone.'
+            );
+        }
+        
+        // Complete Export Functionality
+        async function handleExport() {
+            try {
+                showLoading('Preparing export...');
+                
+                // Get current filtered data or all data
+                const dataToExport = filteredInfluencers.length > 0 
+                    ? filteredInfluencers 
+                    : await loadInfluencers();
+                
+                if (dataToExport.length === 0) {
+                    hideLoading();
+                    showMessage('No data to export', 'warning');
+                    return;
+                }
+                
+                const csvContent = convertToCSV(dataToExport);
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `influencers-export-${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                hideLoading();
+                showMessage(`${dataToExport.length} influencers exported successfully`, 'success');
+                
+            } catch (error) {
+                hideLoading();
+                console.error('Error exporting data:', error);
+                showMessage('Error exporting data: ' + error.message, 'error');
+            }
+        }
+        
+        // Complete Import Functionality - Schema-aware
+        async function handleImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+                showMessage('Please select a valid CSV file', 'error');
+                return;
+            }
+            
+            try {
+                showLoading('Importing CSV data...');
+                
+                const text = await file.text();
+                const data = parseCSV(text);
+                
+                if (data.length === 0) {
+                    hideLoading();
+                    showMessage('No valid data found in CSV file', 'warning');
+                    return;
+                }
+                
+                // Validate data
+                const validatedData = validateImportData(data);
+                
+                console.log('Importing data:', validatedData);
+                
+                // Try to insert data into Supabase
+                const { data: insertedData, error } = await supabaseClient
+                    .from('influencers')
+                    .insert(validatedData)
+                    .select();
+                
+                if (error) {
+                    // If column error, try with minimal data
+                    if (error.message.includes('column')) {
+                        console.log('🔄 Retrying CSV import with minimal columns...');
+                        const minimalData = validatedData.map(row => ({
+                            name: row.name,
+                            handle: row.handle,
+                            follower_count: row.follower_count || 0,
+                            engagement_rate: row.engagement_rate || 0,
+                            status: row.status || 'new_lead',
+                            category_tags: row.category_tags || [],
+                            ...(row.assigned_to && { assigned_to: row.assigned_to })
+                        }));
+                        
+                        const { data: retryData, error: retryError } = await supabaseClient
+                            .from('influencers')
+                            .insert(minimalData)
+                            .select();
+                        
+                        if (retryError) throw retryError;
+                        
+                        hideLoading();
+                        showMessage(`${retryData.length} influencers imported successfully! (Some columns not supported by current schema)`, 'success');
+                        
+                        // Refresh the dashboard
+                        await updateInfluencerTable();
+                        await updateDashboardStats();
+                        
+                        // Clear the file input
+                        event.target.value = '';
+                        return;
+                    }
+                    throw error;
+                }
+                
+                hideLoading();
+                showMessage(`${insertedData.length} influencers imported successfully`, 'success');
+                
+                // Refresh the dashboard
+                await updateInfluencerTable();
+                await updateDashboardStats();
+                
+                // Clear the file input
+                event.target.value = '';
+                
+            } catch (error) {
+                hideLoading();
+                console.error('Error importing CSV:', error);
+                let errorMessage = 'Error importing CSV: ' + error.message;
+                if (error.message.includes('column')) {
+                    errorMessage += '\n\nTip: Use import-template.csv or run enhanced-schema.sql for full features.';
+                }
+                showMessage(errorMessage, 'error');
+            }
+        }
+        
+        // Modal Management Functions
+        function showModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            if (modalId === 'viewInfluencerModal') {
+                isEditMode = false;
+                currentInfluencerId = null;
+            }
+        }
+        
+        function showLoading(message = 'Loading...') {
+            document.getElementById('loadingText').textContent = message;
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+        
+        function showMessage(message, type = 'info') {
+            // Create message element
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${type}`;
+            messageEl.textContent = message;
+            
+            // Insert at top of main content
+            const mainContent = document.querySelector('.main-content');
+            mainContent.insertBefore(messageEl, mainContent.firstChild);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (messageEl.parentNode) {
+                    messageEl.parentNode.removeChild(messageEl);
+                }
+            }, 5000);
+        }
+        
+        function showConfirmation(title, message) {
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmMessage').textContent = message;
+            showModal('confirmModal');
+        }
+        
+        function confirmAction() {
+            if (currentConfirmAction) {
+                currentConfirmAction();
+                currentConfirmAction = null;
+            }
+        }
+        
+        // Form Handling Functions
+        function displayInfluencerDetails(influencer) {
+            const avatar = influencer.handle ? influencer.handle.substring(1, 3).toUpperCase() : 'NN';
+            const isVerified = influencer.follower_count > 50000;
+            
+            document.getElementById('viewInfluencerTitle').textContent = influencer.name;
+            
+            const detailsHTML = `
+                <div class="detail-header">
+                    <div class="detail-avatar">${avatar}</div>
+                    <div class="detail-info">
+                        <h3>${influencer.handle} ${isVerified ? '<span class="verified-icon">✓</span>' : ''}</h3>
+                        <p>${influencer.name}</p>
+                        <p style="margin-top: 5px;">
+                            <span class="status-badge status-${influencer.status.replace('_', '-')}">${formatStatus(influencer.status)}</span>
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="detail-stats">
+                    <div class="detail-stat">
+                        <div class="detail-stat-value">${formatFollowers(influencer.follower_count)}</div>
+                        <div class="detail-stat-label">Followers</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div class="detail-stat-value">${influencer.engagement_rate}%</div>
+                        <div class="detail-stat-label">Engagement Rate</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div class="detail-stat-value">${influencer.post_count || 'N/A'}</div>
+                        <div class="detail-stat-label">Posts</div>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <h4>Bio</h4>
+                    <p>${influencer.bio || 'No bio available'}</p>
+                </div>
+                
+                <div class="detail-section">
+                    <h4>Categories</h4>
+                    <div class="tags">
+                        ${(Array.isArray(influencer.category_tags) ? influencer.category_tags : []).map(cat => 
+                            `<span class="tag tag-${cat.toLowerCase().replace(/\s+/g, '-')}">${cat}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <h4>Assignment</h4>
+                    <p>Assigned to: <strong>${influencer.assigned_to || 'Unassigned'}</strong></p>
+                    <p>Last Contact: ${influencer.last_contact_date ? formatTimeAgo(new Date(influencer.last_contact_date)) : 'Never'}</p>
+                </div>
+                
+                ${influencer.instagram_url ? `
+                <div class="detail-section">
+                    <h4>Social Media</h4>
+                    <p><a href="${influencer.instagram_url}" target="_blank" style="color: #ff6b35;">View Instagram Profile</a></p>
+                </div>
+                ` : ''}
+                
+                ${influencer.notes ? `
+                <div class="detail-section">
+                    <h4>Notes</h4>
+                    <p>${influencer.notes}</p>
+                </div>
+                ` : ''}
+            `;
+            
+            document.getElementById('influencerDetails').innerHTML = detailsHTML;
+        }
+        
+        // CSV Functions
+        function convertToCSV(data) {
+            if (data.length === 0) return '';
+            
+            const headers = [
+                'Name', 'Handle', 'Bio', 'Followers', 'Engagement Rate (%)', 
+                'Status', 'Assigned To', 'Categories', 'Instagram URL', 'Last Contact'
+            ];
+            
+            const csvRows = [headers.join(',')];
+            
+            for (const influencer of data) {
+                const row = [
+                    `"${influencer.name || ''}"`,
+                    `"${influencer.handle || ''}"`,
+                    `"${(influencer.bio || '').replace(/"/g, '""')}"`,
+                    influencer.follower_count || 0,
+                    influencer.engagement_rate || 0,
+                    `"${influencer.status || ''}"`,
+                    `"${influencer.assigned_to || ''}"`,
+                    `"${(Array.isArray(influencer.category_tags) ? influencer.category_tags.join('; ') : '')}"`,
+                    `"${influencer.instagram_url || ''}"`,
+                    `"${influencer.last_contact_date ? new Date(influencer.last_contact_date).toLocaleDateString() : ''}"`
+                ];
+                csvRows.push(row.join(','));
+            }
+            
+            return csvRows.join('\n');
+        }
+        
+        function parseCSV(text) {
+            const lines = text.split('\n').filter(line => line.trim());
+            if (lines.length < 2) return [];
+            
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const data = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                if (values.length >= 2) { // At least name and handle
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        row[mapCSVHeader(header)] = values[index] || '';
+                    });
+                    data.push(row);
+                }
+            }
+            
+            return data;
+        }
+        
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim().replace(/^"|"$/g, ''));
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            result.push(current.trim().replace(/^"|"$/g, ''));
+            return result;
+        }
+        
+        function mapCSVHeader(header) {
+            const headerMap = {
+                'Name': 'name',
+                'Handle': 'handle',
+                'Bio': 'bio',
+                'Followers': 'follower_count',
+                'Engagement Rate (%)': 'engagement_rate',
+                'Status': 'status',
+                'Assigned To': 'assigned_to',
+                'Categories': 'category_tags',
+                'Instagram URL': 'instagram_url',
+                'Post Count': 'post_count',
+                'Notes': 'notes'
+            };
+            return headerMap[header] || header.toLowerCase().replace(/\s+/g, '_');
+        }
+        
+        function validateImportData(data) {
+            return data.map(row => {
+                // Ensure required fields
+                if (!row.name || !row.handle) {
+                    throw new Error('Name and Handle are required fields');
+                }
+                
+                // Make handle unique by adding timestamp if needed
+                if (!row.handle.startsWith('@')) {
+                    row.handle = '@' + row.handle;
+                }
+                row.handle = row.handle + '_' + Date.now();
+                
+                // Parse numeric fields
+                row.follower_count = parseInt(row.follower_count) || 0;
+                row.engagement_rate = parseFloat(row.engagement_rate) || 0;
+                if (row.post_count) {
+                    row.post_count = parseInt(row.post_count) || 0;
+                }
+                
+                // Parse categories
+                if (typeof row.category_tags === 'string') {
+                    row.category_tags = row.category_tags.split(';').map(c => c.trim()).filter(c => c);
+                }
+                
+                // Set default status
+                if (!row.status) {
+                    row.status = 'new_lead';
+                }
+                
+                // Create a minimal version for compatibility
+                const minimalRow = {
+                    name: row.name,
+                    handle: row.handle,
+                    follower_count: row.follower_count,
+                    engagement_rate: row.engagement_rate,
+                    status: row.status,
+                    category_tags: row.category_tags || []
+                };
+                
+                // Add optional fields only if they exist and have values
+                if (row.assigned_to) minimalRow.assigned_to = row.assigned_to;
+                if (row.bio) minimalRow.bio = row.bio;
+                if (row.instagram_url) minimalRow.instagram_url = row.instagram_url;
+                if (row.post_count) minimalRow.post_count = row.post_count;
+                if (row.notes) minimalRow.notes = row.notes;
+                
+                return minimalRow;
+            });
+        }
+        
+        // Enhanced Form Submission
+        async function handleFormSubmission() {
+            // Add Influencer Form - Schema-aware
+            document.getElementById('addInfluencerForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                try {
+                    showLoading('Adding influencer...');
+                    
+                    const formData = new FormData(e.target);
+                    const influencerData = {};
+                    
+                    // Build base data with required fields
+                    influencerData.name = formData.get('name');
+                    influencerData.handle = formData.get('handle');
+                    
+                    // Ensure handle starts with @
+                    if (influencerData.handle && !influencerData.handle.startsWith('@')) {
+                        influencerData.handle = '@' + influencerData.handle;
+                    }
+                    
+                    // Add other fields if they have values
+                    if (formData.get('follower_count')) {
+                        influencerData.follower_count = parseInt(formData.get('follower_count')) || 0;
+                    }
+                    if (formData.get('engagement_rate')) {
+                        influencerData.engagement_rate = parseFloat(formData.get('engagement_rate')) || 0;
+                    }
+                    if (formData.get('status')) {
+                        influencerData.status = formData.get('status');
+                    }
+                    if (formData.get('assigned_to')) {
+                        influencerData.assigned_to = formData.get('assigned_to');
+                    }
+                    if (formData.get('category_tags')) {
+                        influencerData.category_tags = formData.get('category_tags')
+                            .split(',').map(tag => tag.trim()).filter(tag => tag);
+                    }
+                    
+                    // Try to add optional fields (will be ignored if columns don't exist)
+                    if (formData.get('bio')) {
+                        influencerData.bio = formData.get('bio');
+                    }
+                    if (formData.get('instagram_url')) {
+                        influencerData.instagram_url = formData.get('instagram_url');
+                    }
+                    
+                    console.log('Adding influencer with data:', influencerData);
+                    
+                    const { data, error } = await supabaseClient
+                        .from('influencers')
+                        .insert([influencerData])
+                        .select();
+                    
+                    if (error) {
+                        // If column error, try with minimal data
+                        if (error.message.includes('column')) {
+                            console.log('🔄 Retrying with minimal columns...');
+                            const minimalData = {
+                                name: influencerData.name,
+                                handle: influencerData.handle,
+                                follower_count: influencerData.follower_count || 0,
+                                engagement_rate: influencerData.engagement_rate || 0,
+                                status: influencerData.status || 'new_lead',
+                                category_tags: influencerData.category_tags || []
+                            };
+                            
+                            if (influencerData.assigned_to) {
+                                minimalData.assigned_to = influencerData.assigned_to;
+                            }
+                            
+                            const { data: retryData, error: retryError } = await supabaseClient
+                                .from('influencers')
+                                .insert([minimalData])
+                                .select();
+                            
+                            if (retryError) throw retryError;
+                            
+                            hideLoading();
+                            closeModal('addInfluencerModal');
+                            showMessage('Influencer added successfully! (Some fields may not be supported by current schema)', 'success');
+                            
+                            // Refresh dashboard
+                            await updateInfluencerTable();
+                            await updateDashboardStats();
+                            return;
+                        }
+                        throw error;
+                    }
+                    
+                    hideLoading();
+                    closeModal('addInfluencerModal');
+                    showMessage('Influencer added successfully!', 'success');
+                    
+                    // Refresh dashboard
+                    await updateInfluencerTable();
+                    await updateDashboardStats();
+                    
+                } catch (error) {
+                    hideLoading();
+                    console.error('Error adding influencer:', error);
+                    let errorMessage = 'Error adding influencer: ' + error.message;
+                    if (error.message.includes('column')) {
+                        errorMessage += '\n\nTip: Run enhanced-schema.sql to enable all features.';
+                    }
+                    showMessage(errorMessage, 'error');
+                }
+            });
+            
+            // Notes Form
+            document.getElementById('notesForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                if (!currentInfluencerId) return;
+                
+                try {
+                    showLoading('Saving notes...');
+                    
+                    const formData = new FormData(e.target);
+                    const noteData = {
+                        title: formData.get('title'),
+                        content: formData.get('content'),
+                        created_at: new Date().toISOString()
+                    };
+                    
+                    // For now, we'll append notes to the influencer record
+                    // In a full implementation, you'd have a separate notes table
+                    const existingNotes = await getCurrentNotes(currentInfluencerId);
+                    const newNotes = existingNotes + `\n\n[${new Date().toLocaleDateString()}] ${noteData.title ? noteData.title + ': ' : ''}${noteData.content}`;
+                    
+                    const { error } = await supabaseClient
+                        .from('influencers')
+                        .update({ notes: newNotes.trim() })
+                        .eq('id', currentInfluencerId);
+                    
+                    if (error) throw error;
+                    
+                    hideLoading();
+                    closeModal('notesModal');
+                    showMessage('Notes saved successfully!', 'success');
+                    
+                    // If viewing influencer details, refresh them
+                    if (document.getElementById('viewInfluencerModal').style.display === 'flex') {
+                        await viewInfluencer(currentInfluencerId);
+                    }
+                    
+                } catch (error) {
+                    hideLoading();
+                    console.error('Error saving notes:', error);
+                    showMessage('Error saving notes: ' + error.message, 'error');
+                }
+            });
+        }
+        
+        async function getCurrentNotes(influencerId) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('influencers')
+                    .select('notes')
+                    .eq('id', influencerId)
+                    .single();
+                
+                if (error) throw error;
+                return data.notes || '';
+            } catch (error) {
+                console.error('Error getting current notes:', error);
+                return '';
+            }
+        }
+        
+        // Real-time Activity Updates
+        async function addActivity(type, content, value) {
+            try {
+                // For demo purposes, we'll add to local activities
+                // In a full implementation, this would save to Supabase activities table
+                const newActivity = {
+                    id: Date.now().toString(),
+                    type,
+                    content,
+                    value,
+                    avatar: type.charAt(0).toUpperCase(),
+                    created_at: new Date()
+                };
+                
+                activitiesData.unshift(newActivity);
+                updateActivityFeed();
+                
+            } catch (error) {
+                console.error('Error adding activity:', error);
+            }
+        }
+        
+        // Initialize complete functionality when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                console.log('🚀 Starting Complete Prometheus Dashboard...');
+                initializeApp();
+                setupEventListeners();
+                handleFormSubmission();
+                
+                // Close modals when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('modal')) {
+                        closeModal(e.target.id);
+                    }
+                });
+                
+                // ESC key to close modals
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        document.querySelectorAll('.modal').forEach(modal => {
+                            if (modal.style.display === 'flex') {
+                                closeModal(modal.id);
+                            }
+                        });
+                    }
+                });
+                
+            } catch (error) {
+                console.error('❌ Error during initialization:', error);
+            }
+        });
+    </script>
+</body>
+</html>
