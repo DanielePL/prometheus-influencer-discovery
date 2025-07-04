@@ -1244,6 +1244,76 @@
         // Initialize Supabase client
         let supabaseClient;
         
+        // Schema-Normalisierung: Behandelt verschiedene Spaltennamen
+        function normalizeInfluencerData(influencer) {
+            // Erstelle normalisiertes Objekt mit Standard-Spaltennamen
+            const normalized = {
+                id: influencer.id,
+                name: influencer.name || 'Unknown',
+                handle: influencer.handle || '@unknown',
+                // Follower count - versuche verschiedene Spaltennamen
+                follower_count: influencer.follower_count || influencer.followers || 0,
+                engagement_rate: influencer.engagement_rate || 0,
+                status: influencer.status || 'new_lead',
+                assigned_to: influencer.assigned_to || null,
+                // Erweiterte Felder mit Fallbacks
+                category_tags: influencer.category_tags || [],
+                bio: influencer.bio || null,
+                instagram_url: influencer.instagram_url || null,
+                post_count: influencer.post_count || 0,
+                notes: influencer.notes || null,
+                last_contact_date: influencer.last_contact_date || null,
+                created_at: influencer.created_at || new Date().toISOString(),
+                updated_at: influencer.updated_at || new Date().toISOString()
+            };
+            
+            return normalized;
+        }
+        
+        // Batch-Normalisierung für Arrays
+        function normalizeInfluencerArray(influencers) {
+            return influencers.map(normalizeInfluencerData);
+        }
+        
+        // Schema-Detection: Prüft welche Spalten verfügbar sind
+        async function detectAvailableSchema() {
+            if (!supabaseClient) return null;
+            
+            try {
+                // Versuche komplettes Schema
+                const { data, error } = await supabaseClient
+                    .from('influencers')
+                    .select('*')
+                    .limit(1);
+                
+                if (error) {
+                    console.warn('Schema detection failed:', error.message);
+                    return null;
+                }
+                
+                const sampleRecord = data[0];
+                if (!sampleRecord) {
+                    console.log('No records in table for schema detection');
+                    return null;
+                }
+                
+                const schema = {
+                    hasFollowerCount: 'follower_count' in sampleRecord,
+                    hasFollowers: 'followers' in sampleRecord,
+                    hasExtendedFields: 'category_tags' in sampleRecord,
+                    followerField: 'follower_count' in sampleRecord ? 'follower_count' : 'followers',
+                    availableColumns: Object.keys(sampleRecord)
+                };
+                
+                console.log('🔍 Detected schema:', schema);
+                return schema;
+                
+            } catch (error) {
+                console.error('Schema detection error:', error);
+                return null;
+            }
+        }
+        
         // Debug Supabase Configuration
         async function debugSupabaseConnection() {
             console.log('🔍 DEBUGGING SUPABASE CONNECTION...');
@@ -1936,6 +2006,10 @@
             }
             
             try {
+                // Detect schema first to handle different column names
+                const schema = await detectAvailableSchema();
+                const followerField = schema?.followerField || 'follower_count';
+                
                 let query = supabaseClient
                     .from('influencers')
                     .select('*');
@@ -1946,32 +2020,53 @@
                     query = query.eq('status', statusValue);
                 }
                 
-                if (options.category && options.category !== 'All Categories') {
+                if (options.category && options.category !== 'All Categories' && schema?.hasExtendedFields) {
                     query = query.contains('category_tags', [options.category.toLowerCase()]);
                 }
                 
                 if (options.followersRange && options.followersRange !== 'All Followers') {
                     const { min, max } = parseFollowersRange(options.followersRange);
-                    if (min) query = query.gte('follower_count', min);
-                    if (max) query = query.lte('follower_count', max);
+                    // Use the correct follower field based on schema detection
+                    if (min) query = query.gte(followerField, min);
+                    if (max) query = query.lte(followerField, max);
                 }
                 
                 if (options.search) {
                     // Search in handle, name, and bio fields
-                    query = query.or(`handle.ilike.%${options.search}%,name.ilike.%${options.search}%,bio.ilike.%${options.search}%`);
+                    if (schema?.hasExtendedFields) {
+                        query = query.or(`handle.ilike.%${options.search}%,name.ilike.%${options.search}%,bio.ilike.%${options.search}%`);
+                    } else {
+                        // Fallback for minimal schema
+                        query = query.or(`handle.ilike.%${options.search}%,name.ilike.%${options.search}%`);
+                    }
                 }
                 
-                // Apply sorting
-                const sortBy = options.sortBy || 'created_at';
+                // Apply sorting with schema-aware field mapping
+                let sortBy = options.sortBy || 'created_at';
                 const sortOrder = options.sortOrder || 'desc';
+                
+                // Map follower count field if needed
+                if (sortBy === 'follower_count' && schema && !schema.hasFollowerCount && schema.hasFollowers) {
+                    sortBy = 'followers';
+                }
+                
+                // Fallback for unavailable sort fields
+                const availableColumns = schema?.availableColumns || [];
+                if (availableColumns.length > 0 && !availableColumns.includes(sortBy)) {
+                    sortBy = availableColumns.includes('created_at') ? 'created_at' : availableColumns[0];
+                }
+                
                 query = query.order(sortBy, { ascending: sortOrder === 'asc' });
                 
                 const { data: influencers, error } = await query;
                 
                 if (error) throw error;
                 
-                console.log(`Loaded ${influencers?.length || 0} influencers from Supabase`);
-                return influencers || [];
+                // Normalisiere die Daten für konsistente Spaltennamen
+                const normalizedInfluencers = normalizeInfluencerArray(influencers || []);
+                
+                console.log(`Loaded ${normalizedInfluencers?.length || 0} influencers from Supabase`);
+                return normalizedInfluencers;
                 
             } catch (error) {
                 console.error('Error loading influencers from Supabase:', error);
@@ -2637,22 +2732,38 @@
                     .select();
                 
                 if (error) {
-                    // If column error, try with minimal data
+                    // If column error, try with minimal data using schema-aware mapping
                     if (error.message.includes('column')) {
-                        console.log('🔄 Retrying CSV import with minimal columns...');
-                        const minimalData = validatedData.map(row => ({
-                            name: row.name,
-                            handle: row.handle,
-                            follower_count: row.follower_count || 0,
-                            engagement_rate: row.engagement_rate || 0,
-                            status: row.status || 'new_lead',
-                            category_tags: row.category_tags || [],
-                            ...(row.assigned_to && { assigned_to: row.assigned_to })
-                        }));
+                        console.log('🔄 Retrying CSV import with schema-aware mapping...');
+                        
+                        const schema = await detectAvailableSchema();
+                        const followerField = schema?.followerField || 'follower_count';
+                        
+                        const schemaAwareData = validatedData.map(row => {
+                            const mapped = {
+                                name: row.name,
+                                handle: row.handle,
+                                [followerField]: row.follower_count || row.followers || 0, // Use correct field name
+                                engagement_rate: row.engagement_rate || 0,
+                                status: row.status || 'new_lead'
+                            };
+                            
+                            // Add extended fields only if schema supports them
+                            if (schema?.hasExtendedFields) {
+                                mapped.category_tags = row.category_tags || [];
+                                if (row.assigned_to) mapped.assigned_to = row.assigned_to;
+                                if (row.bio) mapped.bio = row.bio;
+                                if (row.instagram_url) mapped.instagram_url = row.instagram_url;
+                                if (row.post_count) mapped.post_count = row.post_count;
+                                if (row.notes) mapped.notes = row.notes;
+                            }
+                            
+                            return mapped;
+                        });
                         
                         const { data: retryData, error: retryError } = await supabaseClient
                             .from('influencers')
-                            .insert(minimalData)
+                            .insert(schemaAwareData)
                             .select();
                         
                         if (retryError) throw retryError;
@@ -2979,9 +3090,12 @@
                         influencerData.handle = '@' + influencerData.handle;
                     }
                     
-                    // Add other fields if they have values
+                    // Add other fields if they have values - schema-aware
+                    const schema = await detectAvailableSchema();
+                    const followerField = schema?.followerField || 'follower_count';
+                    
                     if (formData.get('follower_count')) {
-                        influencerData.follower_count = parseInt(formData.get('follower_count')) || 0;
+                        influencerData[followerField] = parseInt(formData.get('follower_count')) || 0;
                     }
                     if (formData.get('engagement_rate')) {
                         influencerData.engagement_rate = parseFloat(formData.get('engagement_rate')) || 0;
@@ -3013,20 +3127,24 @@
                         .select();
                     
                     if (error) {
-                        // If column error, try with minimal data
+                        // If column error, try with schema-aware minimal data
                         if (error.message.includes('column')) {
-                            console.log('🔄 Retrying with minimal columns...');
+                            console.log('🔄 Retrying with schema-aware minimal columns...');
+                            
                             const minimalData = {
                                 name: influencerData.name,
                                 handle: influencerData.handle,
-                                follower_count: influencerData.follower_count || 0,
+                                [followerField]: influencerData[followerField] || 0,
                                 engagement_rate: influencerData.engagement_rate || 0,
-                                status: influencerData.status || 'new_lead',
-                                category_tags: influencerData.category_tags || []
+                                status: influencerData.status || 'new_lead'
                             };
                             
-                            if (influencerData.assigned_to) {
-                                minimalData.assigned_to = influencerData.assigned_to;
+                            // Add extended fields only if schema supports them
+                            if (schema?.hasExtendedFields) {
+                                minimalData.category_tags = influencerData.category_tags || [];
+                                if (influencerData.assigned_to) {
+                                    minimalData.assigned_to = influencerData.assigned_to;
+                                }
                             }
                             
                             const { data: retryData, error: retryError } = await supabaseClient
