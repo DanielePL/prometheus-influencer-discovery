@@ -95,6 +95,7 @@
         
         .nav-discovery::before { content: "🔍"; }
         .nav-pipeline::before { content: "📊"; }
+        .nav-reminders::before { content: "🔔"; }
         .nav-partners::before { content: "🤝"; }
         .nav-analytics::before { content: "📈"; }
         .nav-export::before { content: "📤"; }
@@ -788,6 +789,171 @@
             justify-content: center;
         }
         
+        /* Reminders Styles */
+        .reminders-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .reminders-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .reminder-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background-color 0.2s;
+        }
+        
+        .reminder-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .reminder-item.overdue {
+            border-left: 4px solid #F44336;
+            background-color: #ffebee;
+        }
+        
+        .reminder-item.due-today {
+            border-left: 4px solid #FF9800;
+            background-color: #fff3e0;
+        }
+        
+        .reminder-item.upcoming {
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .reminder-item.completed {
+            opacity: 0.7;
+            background-color: #f5f5f5;
+        }
+        
+        .reminder-content {
+            flex: 1;
+        }
+        
+        .reminder-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        
+        .reminder-description {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+        
+        .reminder-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .reminder-type {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        
+        .reminder-priority {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        
+        .reminder-priority.high {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .reminder-priority.urgent {
+            background: #f44336;
+            color: white;
+        }
+        
+        .reminder-priority.medium {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+        
+        .reminder-priority.low {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .reminder-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .reminder-due-date {
+            font-weight: 500;
+            color: #333;
+            margin-right: 10px;
+        }
+        
+        .reminder-due-date.overdue {
+            color: #F44336;
+        }
+        
+        .reminder-due-date.due-today {
+            color: #FF9800;
+        }
+        
+        .btn-reminder {
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-complete {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-complete:hover {
+            background: #45a049;
+        }
+        
+        .btn-snooze {
+            background: #FF9800;
+            color: white;
+        }
+        
+        .btn-snooze:hover {
+            background: #f57c00;
+        }
+        
+        .btn-edit {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .btn-edit:hover {
+            background: #1976d2;
+        }
+        
+        .section-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
         .loading-spinner {
             text-align: center;
         }
@@ -980,6 +1146,9 @@
             <div class="nav-item nav-pipeline">
                 Pipeline Management
             </div>
+            <div class="nav-item nav-reminders">
+                📅 Reminders & Follow-ups
+            </div>
             <div class="nav-item nav-partners">
                 Active Partners
             </div>
@@ -1091,6 +1260,71 @@
                 </table>
             </div>
             
+            <!-- Reminders & Follow-ups Section -->
+            <div class="content-section" id="remindersSection" style="display: none;">
+                <div class="section-header">
+                    <h2 class="section-title">📅 Follow-up Reminders</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-primary" onclick="addReminder()">+ Add Reminder</button>
+                        <button class="btn btn-secondary" onclick="viewReminderSettings()">⚙️ Settings</button>
+                    </div>
+                </div>
+                
+                <!-- Reminder Stats -->
+                <div class="stats-grid" style="margin-bottom: 20px;">
+                    <div class="stat-card">
+                        <div class="stat-value" id="overdueCount">0</div>
+                        <div class="stat-label">Overdue</div>
+                        <div class="stat-change negative">🔴 Urgent</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="dueTodayCount">0</div>
+                        <div class="stat-label">Due Today</div>
+                        <div class="stat-change warning">🟡 Today</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="upcomingCount">0</div>
+                        <div class="stat-label">Upcoming</div>
+                        <div class="stat-change positive">🟢 Soon</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="completedTodayCount">0</div>
+                        <div class="stat-label">Completed Today</div>
+                        <div class="stat-change positive">✅ Done</div>
+                    </div>
+                </div>
+                
+                <!-- Reminder Filters -->
+                <div class="filter-section">
+                    <select id="reminderStatusFilter" onchange="filterReminders()">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="overdue">Overdue</option>
+                        <option value="due_today">Due Today</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                    <select id="reminderTypeFilter" onchange="filterReminders()">
+                        <option value="">All Types</option>
+                        <option value="follow_up">Follow-up</option>
+                        <option value="meeting">Meeting</option>
+                        <option value="call">Call</option>
+                        <option value="email">Email</option>
+                        <option value="deadline">Deadline</option>
+                    </select>
+                    <select id="reminderAssigneeFilter" onchange="filterReminders()">
+                        <option value="">All Assignees</option>
+                        <option value="me">My Reminders</option>
+                    </select>
+                </div>
+                
+                <!-- Reminders List -->
+                <div class="reminders-container">
+                    <div class="reminders-list" id="remindersList">
+                        <!-- Reminder items will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+            
             <div class="content-section">
                 <div class="section-header">
                     <h2 class="section-title">Recent Activity</h2>
@@ -1101,6 +1335,66 @@
                     <!-- Activity items will be dynamically populated -->
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Add Reminder Modal -->
+    <div id="addReminderModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📅 Add Follow-up Reminder</h2>
+                <button class="btn-close" onclick="closeModal('addReminderModal')">&times;</button>
+            </div>
+            <form id="addReminderForm" class="modal-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="reminderInfluencer">Influencer *</label>
+                        <select id="reminderInfluencer" name="influencer_id" required>
+                            <option value="">Select influencer...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="reminderType">Reminder Type *</label>
+                        <select id="reminderType" name="reminder_type" required>
+                            <option value="follow_up">Follow-up</option>
+                            <option value="meeting">Meeting</option>
+                            <option value="call">Phone Call</option>
+                            <option value="email">Email</option>
+                            <option value="deadline">Deadline</option>
+                            <option value="review">Review</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="reminderTitle">Title *</label>
+                        <input type="text" id="reminderTitle" name="title" placeholder="Follow up on partnership proposal" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reminderPriority">Priority</label>
+                        <select id="reminderPriority" name="priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="reminderDueDate">Due Date *</label>
+                        <input type="datetime-local" id="reminderDueDate" name="due_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reminderAssignedTo">Assigned To</label>
+                        <input type="text" id="reminderAssignedTo" name="assigned_to" placeholder="Team member name">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="reminderDescription">Description</label>
+                        <textarea id="reminderDescription" name="description" placeholder="Additional details about this reminder..." rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addReminderModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Reminder</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -2249,6 +2543,33 @@
         }
         
         function setupEventListeners() {
+            // Navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    // Remove active class from all nav items
+                    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                    // Add active class to clicked item
+                    item.classList.add('active');
+                    
+                    // Hide all content sections
+                    document.querySelectorAll('.content-section').forEach(section => {
+                        section.style.display = 'none';
+                    });
+                    
+                    // Show relevant section
+                    if (item.classList.contains('nav-dashboard')) {
+                        document.querySelectorAll('.content-section').forEach(section => {
+                            if (!section.id || section.id === 'remindersSection') return;
+                            section.style.display = 'block';
+                        });
+                    } else if (item.classList.contains('nav-reminders')) {
+                        document.getElementById('remindersSection').style.display = 'block';
+                        displayReminders();
+                    }
+                    // Add other navigation logic as needed
+                });
+            });
+            
             // Search functionality
             document.getElementById('searchInput').addEventListener('input', handleSearch);
             
@@ -3069,8 +3390,409 @@
             });
         }
         
+        // ================================================
+        // FOLLOW-UP REMINDERS SYSTEM
+        // ================================================
+        
+        let remindersData = [];
+        
+        // Load Reminders from Supabase
+        async function loadReminders() {
+            if (!supabaseClient || SUPABASE_URL === 'YOUR_SUPABASE_URL_HERE') {
+                console.log('Using demo data for reminders');
+                return generateDemoReminders();
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('active_reminders')
+                    .select('*')
+                    .order('due_date', { ascending: true });
+                
+                if (error) {
+                    console.error('Error loading reminders:', error);
+                    return generateDemoReminders();
+                }
+                
+                return data || [];
+            } catch (error) {
+                console.error('Error loading reminders:', error);
+                return generateDemoReminders();
+            }
+        }
+        
+        // Generate Demo Reminders
+        function generateDemoReminders() {
+            const now = new Date();
+            return [
+                {
+                    id: 1,
+                    influencer_name: 'Daniele Pauli',
+                    influencer_handle: '@danielepauli',
+                    title: 'Follow up on partnership proposal',
+                    description: 'Check response to collaboration offer',
+                    reminder_type: 'follow_up',
+                    priority: 'high',
+                    due_date: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+                    assigned_to: 'Valerie',
+                    status: 'pending',
+                    urgency_status: 'overdue'
+                },
+                {
+                    id: 2,
+                    influencer_name: 'Fitness Guru',
+                    influencer_handle: '@fitnessguru',
+                    title: 'Schedule product demo call',
+                    description: 'Set up call to showcase new fitness tracker',
+                    reminder_type: 'call',
+                    priority: 'medium',
+                    due_date: new Date().toISOString(), // Today
+                    assigned_to: 'Team',
+                    status: 'pending',
+                    urgency_status: 'due_soon'
+                },
+                {
+                    id: 3,
+                    influencer_name: 'Wellness Coach',
+                    influencer_handle: '@wellnesscoach',
+                    title: 'Review monthly performance',
+                    description: 'Analyze campaign metrics and plan next steps',
+                    reminder_type: 'review',
+                    priority: 'medium',
+                    due_date: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days later
+                    assigned_to: 'Marketing Team',
+                    status: 'pending',
+                    urgency_status: 'upcoming'
+                }
+            ];
+        }
+        
+        // Display Reminders
+        async function displayReminders() {
+            const remindersList = document.getElementById('remindersList');
+            if (!remindersList) return;
+            
+            remindersData = await loadReminders();
+            
+            if (remindersData.length === 0) {
+                remindersList.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        <h3>🎉 No pending reminders!</h3>
+                        <p>You're all caught up. Great work!</p>
+                        <button class="btn btn-primary" onclick="addReminder()">Add First Reminder</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            remindersList.innerHTML = remindersData.map(reminder => `
+                <div class="reminder-item ${reminder.urgency_status}" data-id="${reminder.id}">
+                    <div class="reminder-content">
+                        <div class="reminder-title">${reminder.title}</div>
+                        <div class="reminder-description">${reminder.description || ''}</div>
+                        <div class="reminder-meta">
+                            <span class="reminder-type">${reminder.reminder_type}</span>
+                            <span class="reminder-priority ${reminder.priority}">${reminder.priority}</span>
+                            <span>👤 ${reminder.assigned_to}</span>
+                            <span>📱 ${reminder.influencer_handle}</span>
+                        </div>
+                    </div>
+                    <div class="reminder-actions">
+                        <div class="reminder-due-date ${reminder.urgency_status}">
+                            ${formatReminderDate(reminder.due_date)}
+                        </div>
+                        ${reminder.status === 'pending' ? `
+                            <button class="btn-reminder btn-complete" onclick="completeReminder(${reminder.id})">
+                                ✓ Complete
+                            </button>
+                            <button class="btn-reminder btn-snooze" onclick="snoozeReminder(${reminder.id})">
+                                💤 Snooze
+                            </button>
+                            <button class="btn-reminder btn-edit" onclick="editReminder(${reminder.id})">
+                                ✏️ Edit
+                            </button>
+                        ` : `
+                            <span class="completed-badge">✅ Completed</span>
+                        `}
+                    </div>
+                </div>
+            `).join('');
+            
+            updateReminderStats();
+        }
+        
+        // Update Reminder Statistics
+        function updateReminderStats() {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            const overdue = remindersData.filter(r => r.status === 'pending' && new Date(r.due_date) < today).length;
+            const dueToday = remindersData.filter(r => r.status === 'pending' && 
+                new Date(r.due_date).toDateString() === today.toDateString()).length;
+            const upcoming = remindersData.filter(r => r.status === 'pending' && new Date(r.due_date) > today).length;
+            const completedToday = remindersData.filter(r => r.status === 'completed' && 
+                new Date(r.completed_at || r.updated_at).toDateString() === today.toDateString()).length;
+            
+            document.getElementById('overdueCount').textContent = overdue;
+            document.getElementById('dueTodayCount').textContent = dueToday;
+            document.getElementById('upcomingCount').textContent = upcoming;
+            document.getElementById('completedTodayCount').textContent = completedToday;
+        }
+        
+        // Format Reminder Date
+        function formatReminderDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffTime = date.getTime() - now.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 0) {
+                return `${Math.abs(diffDays)} days overdue`;
+            } else if (diffDays === 0) {
+                return `Due today at ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+            } else if (diffDays === 1) {
+                return 'Due tomorrow';
+            } else {
+                return `Due in ${diffDays} days`;
+            }
+        }
+        
+        // Add New Reminder
+        async function addReminder() {
+            // Populate influencer dropdown
+            const influencerSelect = document.getElementById('reminderInfluencer');
+            const influencers = await loadInfluencers();
+            
+            influencerSelect.innerHTML = '<option value="">Select influencer...</option>' +
+                influencers.map(inf => `<option value="${inf.id}">${inf.name} (${inf.handle})</option>`).join('');
+            
+            // Set default due date to tomorrow
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(10, 0, 0, 0);
+            document.getElementById('reminderDueDate').value = tomorrow.toISOString().slice(0, 16);
+            
+            showModal('addReminderModal');
+        }
+        
+        // Complete Reminder
+        async function completeReminder(reminderId) {
+            try {
+                if (supabaseClient && SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
+                    const { error } = await supabaseClient
+                        .from('reminders')
+                        .update({ 
+                            status: 'completed',
+                            completed_at: new Date().toISOString()
+                        })
+                        .eq('id', reminderId);
+                    
+                    if (error) throw error;
+                }
+                
+                // Update local data
+                const reminder = remindersData.find(r => r.id === reminderId);
+                if (reminder) {
+                    reminder.status = 'completed';
+                    reminder.completed_at = new Date().toISOString();
+                }
+                
+                showMessage('Reminder completed successfully!', 'success');
+                await displayReminders();
+                
+            } catch (error) {
+                console.error('Error completing reminder:', error);
+                showMessage('Error completing reminder: ' + error.message, 'error');
+            }
+        }
+        
+        // Snooze Reminder
+        async function snoozeReminder(reminderId) {
+            const snoozeOptions = [
+                { label: '1 hour', hours: 1 },
+                { label: '4 hours', hours: 4 },
+                { label: '1 day', hours: 24 },
+                { label: '3 days', hours: 72 },
+                { label: '1 week', hours: 168 }
+            ];
+            
+            const choice = prompt('Snooze for how long?\n' + 
+                snoozeOptions.map((opt, i) => `${i+1}. ${opt.label}`).join('\n') + 
+                '\nEnter number (1-5):');
+            
+            if (!choice || choice < 1 || choice > 5) return;
+            
+            const snoozeHours = snoozeOptions[choice - 1].hours;
+            const snoozeUntil = new Date(Date.now() + snoozeHours * 60 * 60 * 1000);
+            
+            try {
+                if (supabaseClient && SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
+                    const { error } = await supabaseClient
+                        .from('reminders')
+                        .update({ 
+                            status: 'snoozed',
+                            snooze_until: snoozeUntil.toISOString()
+                        })
+                        .eq('id', reminderId);
+                    
+                    if (error) throw error;
+                }
+                
+                showMessage(`Reminder snoozed for ${snoozeOptions[choice - 1].label}!`, 'success');
+                await displayReminders();
+                
+            } catch (error) {
+                console.error('Error snoozing reminder:', error);
+                showMessage('Error snoozing reminder: ' + error.message, 'error');
+            }
+        }
+        
+        // Edit Reminder
+        function editReminder(reminderId) {
+            const reminder = remindersData.find(r => r.id === reminderId);
+            if (!reminder) return;
+            
+            // Populate form with existing data
+            document.getElementById('reminderInfluencer').value = reminder.influencer_id;
+            document.getElementById('reminderType').value = reminder.reminder_type;
+            document.getElementById('reminderTitle').value = reminder.title;
+            document.getElementById('reminderPriority').value = reminder.priority;
+            document.getElementById('reminderDueDate').value = new Date(reminder.due_date).toISOString().slice(0, 16);
+            document.getElementById('reminderAssignedTo').value = reminder.assigned_to;
+            document.getElementById('reminderDescription').value = reminder.description || '';
+            
+            // Store edit mode
+            document.getElementById('addReminderForm').dataset.editId = reminderId;
+            document.querySelector('#addReminderModal h2').textContent = '✏️ Edit Reminder';
+            
+            showModal('addReminderModal');
+        }
+        
+        // Filter Reminders
+        function filterReminders() {
+            const statusFilter = document.getElementById('reminderStatusFilter').value;
+            const typeFilter = document.getElementById('reminderTypeFilter').value;
+            const assigneeFilter = document.getElementById('reminderAssigneeFilter').value;
+            
+            let filteredData = [...remindersData];
+            
+            if (statusFilter) {
+                if (statusFilter === 'overdue') {
+                    filteredData = filteredData.filter(r => r.urgency_status === 'overdue');
+                } else if (statusFilter === 'due_today') {
+                    filteredData = filteredData.filter(r => r.urgency_status === 'due_soon');
+                } else {
+                    filteredData = filteredData.filter(r => r.status === statusFilter);
+                }
+            }
+            
+            if (typeFilter) {
+                filteredData = filteredData.filter(r => r.reminder_type === typeFilter);
+            }
+            
+            if (assigneeFilter === 'me') {
+                // TODO: Filter by current user
+                filteredData = filteredData.filter(r => r.assigned_to === 'Valerie'); // Demo
+            }
+            
+            // Re-render with filtered data
+            const remindersList = document.getElementById('remindersList');
+            remindersList.innerHTML = filteredData.map(reminder => `
+                <div class="reminder-item ${reminder.urgency_status}" data-id="${reminder.id}">
+                    <div class="reminder-content">
+                        <div class="reminder-title">${reminder.title}</div>
+                        <div class="reminder-description">${reminder.description || ''}</div>
+                        <div class="reminder-meta">
+                            <span class="reminder-type">${reminder.reminder_type}</span>
+                            <span class="reminder-priority ${reminder.priority}">${reminder.priority}</span>
+                            <span>👤 ${reminder.assigned_to}</span>
+                            <span>📱 ${reminder.influencer_handle}</span>
+                        </div>
+                    </div>
+                    <div class="reminder-actions">
+                        <div class="reminder-due-date ${reminder.urgency_status}">
+                            ${formatReminderDate(reminder.due_date)}
+                        </div>
+                        ${reminder.status === 'pending' ? `
+                            <button class="btn-reminder btn-complete" onclick="completeReminder(${reminder.id})">
+                                ✓ Complete
+                            </button>
+                            <button class="btn-reminder btn-snooze" onclick="snoozeReminder(${reminder.id})">
+                                💤 Snooze
+                            </button>
+                            <button class="btn-reminder btn-edit" onclick="editReminder(${reminder.id})">
+                                ✏️ Edit
+                            </button>
+                        ` : `
+                            <span class="completed-badge">✅ Completed</span>
+                        `}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
         // Enhanced Form Submission
         async function handleFormSubmission() {
+            // Add Reminder Form Handler
+            document.getElementById('addReminderForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                try {
+                    showLoading('Saving reminder...');
+                    
+                    const formData = new FormData(e.target);
+                    const reminderData = {
+                        influencer_id: parseInt(formData.get('influencer_id')),
+                        title: formData.get('title'),
+                        description: formData.get('description'),
+                        reminder_type: formData.get('reminder_type'),
+                        priority: formData.get('priority'),
+                        due_date: formData.get('due_date'),
+                        assigned_to: formData.get('assigned_to') || 'Team',
+                        created_by: 'Current User' // TODO: Get from auth
+                    };
+                    
+                    const editId = e.target.dataset.editId;
+                    
+                    if (supabaseClient && SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
+                        let result;
+                        if (editId) {
+                            // Update existing reminder
+                            result = await supabaseClient
+                                .from('reminders')
+                                .update(reminderData)
+                                .eq('id', editId)
+                                .select();
+                        } else {
+                            // Create new reminder
+                            result = await supabaseClient
+                                .from('reminders')
+                                .insert([reminderData])
+                                .select();
+                        }
+                        
+                        if (result.error) throw result.error;
+                    }
+                    
+                    hideLoading();
+                    closeModal('addReminderModal');
+                    showMessage(editId ? 'Reminder updated successfully!' : 'Reminder created successfully!', 'success');
+                    
+                    // Reset form
+                    e.target.reset();
+                    delete e.target.dataset.editId;
+                    document.querySelector('#addReminderModal h2').textContent = '📅 Add Follow-up Reminder';
+                    
+                    // Refresh reminders
+                    await displayReminders();
+                    
+                } catch (error) {
+                    hideLoading();
+                    console.error('Error saving reminder:', error);
+                    showMessage('Error saving reminder: ' + error.message, 'error');
+                }
+            });
+            
             // Add Influencer Form - Schema-aware
             document.getElementById('addInfluencerForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
