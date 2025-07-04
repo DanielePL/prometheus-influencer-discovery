@@ -81,7 +81,8 @@
     <div class="config-box">
         <h2>🗄️ Schritt 3: Datenbank-Schema</h2>
         <p>Falls Sie noch keine Tabellen haben:</p>
-        <button class="btn" onclick="openSchema()">📄 Schema-SQL öffnen</button>
+        <button class="btn" onclick="openSchema()">📄 Enhanced Schema SQL</button>
+        <button class="btn" onclick="openMinimalSchema()">📄 Minimal Schema SQL</button>
         <button class="btn" onclick="openSampleData()">📊 Sample-Daten öffnen</button>
     </div>
     
@@ -89,6 +90,15 @@
         <h2>🚀 Schritt 4: Dashboard starten</h2>
         <button class="btn" onclick="openDashboard()">🎯 Dashboard öffnen</button>
         <button class="btn" onclick="openTestTool()">🔧 Test-Tool öffnen</button>
+        <button class="btn" onclick="openQuickTest()">⚡ Quick-Test öffnen</button>
+    </div>
+    
+    <div class="config-box">
+        <h2>📊 GitHub Pages Deployment</h2>
+        <p>✅ Dieses Repository ist GitHub Pages ready!</p>
+        <p>Repository URL: <a href="https://github.com/DanielePL/prometheus-influencer-discovery" target="_blank" style="color: #ff6b35;">github.com/DanielePL/prometheus-influencer-discovery</a></p>
+        <p>Live Demo: <a href="https://danielepl.github.io/prometheus-influencer-discovery/" target="_blank" style="color: #4CAF50;">danielepl.github.io/prometheus-influencer-discovery</a></p>
+        <button class="btn" onclick="openGitHubPages()">🌐 GitHub Pages öffnen</button>
     </div>
 
     <script>
@@ -166,7 +176,11 @@
         }
         
         function openSchema() {
-            window.open('supabase-schema.sql', '_blank');
+            window.open('enhanced-schema.sql', '_blank');
+        }
+        
+        function openMinimalSchema() {
+            window.open('minimal-schema.sql', '_blank');
         }
         
         function openSampleData() {
@@ -179,6 +193,14 @@
         
         function openTestTool() {
             window.open('test-connection.html', '_blank');
+        }
+        
+        function openQuickTest() {
+            window.open('quick-test.html', '_blank');
+        }
+        
+        function openGitHubPages() {
+            window.open('https://danielepl.github.io/prometheus-influencer-discovery/', '_blank');
         }
         
         // Auto-load saved credentials
